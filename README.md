@@ -17,9 +17,11 @@ A modern, full-stack web application designed to manage, streamline, and automat
 - **Applicant Management**: View resumes, filter applicants, and update application statuses dynamically.
 
 ### 🔒 Core Security
-- **Authentication**: JWT (JSON Web Token) based secure user authentication.
+- **Authentication**: JWT (JSON Web Token) based user authentication.
+- **Session Security**: Secured using **HTTP-only Cookies** to store the JWT, preventing XSS-based token theft and enabling automatic session management.
 - **Password Hashing**: Bcrypt encryption for storing user credentials.
 - **Protected Routes**: Middleware routing to separate public, student-only, and admin-only pages.
+
 
 ---
 
