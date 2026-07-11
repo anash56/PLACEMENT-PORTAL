@@ -199,8 +199,9 @@ export const updateProfile = async (req, res) => {
             // Write raw buffer to file on disk
             fs.writeFileSync(filePath, buffer);
 
-            // Save public URL
-            updateData.resumeUrl = `http://localhost:5000/uploads/resumes/${fileName}`;
+            // Save public URL dynamically
+            const serverUrl = process.env.BACKEND_URL || `${req.protocol}://${req.get("host")}`;
+            updateData.resumeUrl = `${serverUrl}/uploads/resumes/${fileName}`;
         }
 
         // Auto mark profile as completed if all required fields are provided
