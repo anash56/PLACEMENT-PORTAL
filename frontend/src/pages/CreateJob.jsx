@@ -6,7 +6,7 @@ import api from "../services/api";
 
 import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
-import Textarea from "../components/ui/Textarea";
+import Textarea from "../components/ui/TextArea";
 import Card from "../components/ui/Card";
 import PageContainer from "../components/ui/PageContainer";
 
