@@ -55,22 +55,14 @@ function Login() {
 
 
             // Create user object
-
             const loggedInUser = {
-
                 name: res.data.name,
-
                 email: res.data.email,
-
-                role: res.data.role
-
+                role: res.data.role,
+                token: res.data.token
             };
 
-
-            // AuthContext handles:
-            //
-            // 1. Saving token in localStorage
-            // 2. Saving user in localStorage
+            // Save user info and token to state and localStorage
             login(loggedInUser);
 
 
