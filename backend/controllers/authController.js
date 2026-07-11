@@ -3,6 +3,14 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import fs from "fs";
 import path from "path";
+import { v2 as cloudinary } from "cloudinary";
+
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
 
 export const register = async (req, res) => {
 
@@ -187,22 +195,28 @@ export const updateProfile = async (req, res) => {
             const base64Data = resumeBase64.replace(/^data:application\/pdf;base64,/, "");
             const buffer = Buffer.from(base64Data, "base64");
 
-            // Setup uploads directory inside public/
-            const uploadDir = path.join(process.cwd(), "public", "uploads", "resumes");
-            if (!fs.existsSync(uploadDir)) {
-                fs.mkdirSync(uploadDir, { recursive: true });
-            }
-
             const sanitizedName = resumeName.replace(/[^a-zA-Z0-9.-]/g, "_");
-            const fileName = `${req.user.id}_${Date.now()}_${sanitizedName}`;
-            const filePath = path.join(uploadDir, fileName);
+            const fileKey = `${req.user.id}_${Date.now()}_${sanitizedName}`;
 
-            // Write raw buffer to file on disk
-            fs.writeFileSync(filePath, buffer);
+            const result = await new Promise((resolve, reject) => {
+                const stream = cloudinary.uploader.upload_stream(
+                    {
+                        folder: "resumes",
+                        resource_type: "raw",
+                        public_id: fileKey
+                    },
+                    (error, uploadResult) => {
+                        if (error) {
+                            reject(error);
+                        } else {
+                            resolve(uploadResult);
+                        }
+                    }
+                );
+                stream.end(buffer);
+            });
 
-            // Save public URL dynamically
-            const serverUrl = process.env.BACKEND_URL || `${req.protocol}://${req.get("host")}`;
-            updateData.resumeUrl = `${serverUrl}/uploads/resumes/${fileName}`;
+            updateData.resumeUrl = result.secure_url;
         }
 
         // Auto mark profile as completed if all required fields are provided
