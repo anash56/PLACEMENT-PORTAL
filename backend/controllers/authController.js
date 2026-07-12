@@ -197,13 +197,14 @@ export const updateProfile = async (req, res) => {
 
             const sanitizedName = resumeName.replace(/[^a-zA-Z0-9.-]/g, "_");
             const fileKey = `${req.user.id}_${Date.now()}_${sanitizedName}`;
+            const publicId = fileKey.replace(/\.[^/.]+$/, ""); // Strip extension for Cloudinary auto upload
 
             const result = await new Promise((resolve, reject) => {
                 const stream = cloudinary.uploader.upload_stream(
                     {
                         folder: "resumes",
-                        resource_type: "raw",
-                        public_id: fileKey
+                        resource_type: "auto", // Let Cloudinary auto-detect (treats PDF as image/document so it is served as application/pdf)
+                        public_id: publicId
                     },
                     (error, uploadResult) => {
                         if (error) {
