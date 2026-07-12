@@ -22,6 +22,36 @@ const userSchema = new mongoose.Schema(
         type:String,
         enum:["student","admin"],
         default:"student"
+    },
+
+    cgpa:{
+        type:Number
+    },
+
+    branch:{
+        type:String
+    },
+
+    graduationYear:{
+        type:Number
+    },
+
+    skills:{
+        type:[String],
+        default:[]
+    },
+
+    contactNumber:{
+        type:String
+    },
+
+    resumeUrl:{
+        type:String
+    },
+
+    isProfileCompleted:{
+        type:Boolean,
+        default:false
     }
 },
 {
