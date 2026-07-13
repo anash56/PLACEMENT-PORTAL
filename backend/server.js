@@ -6,8 +6,23 @@ import authRoutes from "./routes/authRoutes.js";
 import jobRoutes from "./routes/jobRoutes.js";
 import applicationRoutes from "./routes/applicationRoutes.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
+import nosqlSanitize from "./middleware/security.js";
+import rateLimiter from "./middleware/rateLimiter.js";
 
 dotenv.config();
+
+// Initialize custom rate limiters
+const authRateLimiter = rateLimiter({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 20, // max 20 auth requests per 15 minutes per IP
+    message: "Too many authentication requests from this IP. Please try again after 15 minutes."
+});
+
+const globalRateLimiter = rateLimiter({
+    windowMs: 1 * 60 * 1000, // 1 minute
+    max: 100, // max 100 API requests per minute per IP
+    message: "Too many requests. Please try again in a minute."
+});
 
 const startServer = async () => {
     await connectDB();
@@ -23,6 +38,10 @@ const startServer = async () => {
 
     app.use(express.json({ limit: "10mb" }));
     app.use(express.urlencoded({ limit: "10mb", extended: true }));
+    
+    // Apply NoSQL Sanitization and Global Rate Limiting
+    app.use(nosqlSanitize);
+    app.use(globalRateLimiter);
 
     app.use("/uploads", express.static("public/uploads"));
 
@@ -30,7 +49,8 @@ const startServer = async () => {
         res.send("Server is running");
     });
 
-    app.use("/api/auth", authRoutes);
+    // Apply strict rate limiting to auth routes
+    app.use("/api/auth", authRateLimiter, authRoutes);
 
     app.use("/api/jobs", jobRoutes);
 
