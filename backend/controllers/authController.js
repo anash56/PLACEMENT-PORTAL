@@ -220,10 +220,19 @@ export const updateProfile = async (req, res) => {
             updateData.resumeUrl = result.secure_url;
         }
 
-        // Auto mark profile as completed if all required fields are provided
-        if (cgpa && branch && graduationYear && contactNumber) {
-            updateData.isProfileCompleted = true;
+        // Fetch current user from DB to evaluate final state
+        const currentUser = await User.findById(req.user.id);
+        if (!currentUser) {
+            return res.status(404).json({
+                message: "User not found"
+            });
         }
+        const finalCgpa = cgpa !== undefined ? cgpa : currentUser.cgpa;
+        const finalBranch = branch !== undefined ? branch : currentUser.branch;
+        const finalGraduationYear = graduationYear !== undefined ? graduationYear : currentUser.graduationYear;
+        const finalContactNumber = contactNumber !== undefined ? contactNumber : currentUser.contactNumber;
+
+        updateData.isProfileCompleted = !!(finalCgpa && finalBranch && finalGraduationYear && finalContactNumber);
 
         const user = await User.findByIdAndUpdate(
             req.user.id,

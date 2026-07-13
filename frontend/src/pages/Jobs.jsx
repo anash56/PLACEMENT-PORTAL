@@ -44,12 +44,33 @@ function Jobs() {
     ] = useState(null);
 
     const [error, setError] = useState("");
+    const [appliedJobIds, setAppliedJobIds] = useState([]);
 
     useEffect(() => {
 
         fetchJobs();
 
     }, [page, submittedSearch, submittedLocation, sort]);
+
+    useEffect(() => {
+        if (isAuthenticated && !isAdmin) {
+            fetchAppliedJobs();
+        } else {
+            setAppliedJobIds([]);
+        }
+    }, [isAuthenticated, isAdmin]);
+
+    const fetchAppliedJobs = async () => {
+        try {
+            const res = await api.get("/applications/my?limit=1000");
+            const ids = (res.data.applications || [])
+                .filter((app) => app.job !== null && app.job !== undefined)
+                .map((app) => app.job._id);
+            setAppliedJobIds(ids);
+        } catch (err) {
+            console.error("Failed to fetch applied jobs:", err);
+        }
+    };
 
     const fetchJobs = async () => {
 
@@ -142,6 +163,7 @@ function Jobs() {
             );
 
            toast.success("Applied Successfully");
+           setAppliedJobIds((prev) => [...prev, jobId]);
 
         }
 
@@ -564,7 +586,7 @@ function Jobs() {
 
                                                             className="w-full"
 
-                                                            disabled={applying}
+                                                            disabled={applying || appliedJobIds.includes(job._id)}
 
                                                             onClick={() =>
 
@@ -581,6 +603,14 @@ function Jobs() {
                                                                 ?
 
                                                                 "Applying..."
+
+                                                                :
+
+                                                                appliedJobIds.includes(job._id)
+
+                                                                ?
+
+                                                                "Applied"
 
                                                                 :
 
