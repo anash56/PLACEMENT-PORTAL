@@ -1,21 +1,26 @@
 import {
+    lazy,
+    Suspense
+} from "react";
+
+import {
     BrowserRouter,
     Routes,
     Route,
     Outlet
 } from "react-router-dom";
 
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import Jobs from "./pages/Jobs";
-import MyApplications from "./pages/MyApplications";
-import Profile from "./pages/Profile";
+const Login = lazy(() => import("./pages/Login"));
+const Register = lazy(() => import("./pages/Register"));
+const Jobs = lazy(() => import("./pages/Jobs"));
+const MyApplications = lazy(() => import("./pages/MyApplications"));
+const Profile = lazy(() => import("./pages/Profile"));
 
-import AdminDashboard from "./pages/AdminDashboard";
-import CreateJob from "./pages/CreateJob";
-import Applicants from "./pages/Applicants";
-import ManageJobs from "./pages/ManageJobs";
-import EditJob from "./pages/EditJob";
+const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
+const CreateJob = lazy(() => import("./pages/CreateJob"));
+const Applicants = lazy(() => import("./pages/Applicants"));
+const ManageJobs = lazy(() => import("./pages/ManageJobs"));
+const EditJob = lazy(() => import("./pages/EditJob"));
 
 import Navbar from "./components/Navbar";
 
@@ -41,6 +46,17 @@ function NormalLayout() {
 
 }
 
+function LoadingFallback() {
+    return (
+        <div className="flex h-screen w-screen items-center justify-center bg-gray-50">
+            <div className="flex flex-col items-center gap-4">
+                <div className="h-12 w-12 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600"></div>
+                <p className="text-sm font-medium text-gray-500 animate-pulse">Loading page...</p>
+            </div>
+        </div>
+    );
+}
+
 
 function App() {
 
@@ -48,108 +64,112 @@ function App() {
 
         <BrowserRouter>
 
-            <Routes>
+            <Suspense fallback={<LoadingFallback />}>
 
-                {/* GUEST + STUDENT ROUTES */}
+                <Routes>
 
-                <Route element={<NormalLayout />}>
+                    {/* GUEST + STUDENT ROUTES */}
+
+                    <Route element={<NormalLayout />}>
+
+                        <Route
+                            path="/"
+                            element={<Jobs />}
+                        />
+
+                        <Route
+                            path="/login"
+                            element={<Login />}
+                        />
+
+                        <Route
+                            path="/register"
+                            element={<Register />}
+                        />
+
+                        <Route
+
+                            path="/my-applications"
+
+                            element={
+
+                                <ProtectedRoute>
+
+                                    <MyApplications />
+
+                                </ProtectedRoute>
+
+                            }
+
+                        />
+
+                        <Route
+
+                            path="/profile"
+
+                            element={
+
+                                <ProtectedRoute>
+
+                                    <Profile />
+
+                                </ProtectedRoute>
+
+                            }
+
+                        />
+
+                    </Route>
+
+
+                    {/* ADMIN ROUTES */}
 
                     <Route
-                        path="/"
-                        element={<Jobs />}
-                    />
 
-                    <Route
-                        path="/login"
-                        element={<Login />}
-                    />
-
-                    <Route
-                        path="/register"
-                        element={<Register />}
-                    />
-
-                    <Route
-
-                        path="/my-applications"
+                        path="/admin"
 
                         element={
 
-                            <ProtectedRoute>
+                            <AdminRoute>
 
-                                <MyApplications />
+                                <AdminLayout />
 
-                            </ProtectedRoute>
-
-                        }
-
-                    />
-
-                    <Route
-
-                        path="/profile"
-
-                        element={
-
-                            <ProtectedRoute>
-
-                                <Profile />
-
-                            </ProtectedRoute>
+                            </AdminRoute>
 
                         }
 
-                    />
+                    >
 
-                </Route>
+                        <Route
+                            index
+                            element={<AdminDashboard />}
+                        />
 
+                        <Route
+                            path="jobs"
+                            element={<ManageJobs />}
+                        />
 
-                {/* ADMIN ROUTES */}
+                        <Route
+                            path="jobs/create"
+                            element={<CreateJob />}
+                        />
 
-                <Route
+                        <Route
+                            path="jobs/:id/edit"
+                            element={<EditJob />}
+                        />
 
-                    path="/admin"
+                        <Route
+                            path="jobs/:jobId/applicants"
+                            element={<Applicants />}
+                        />
 
-                    element={
+                    </Route>
 
-                        <AdminRoute>
+                </Routes>
 
-                            <AdminLayout />
-
-                        </AdminRoute>
-
-                    }
-
-                >
-
-                    <Route
-                        index
-                        element={<AdminDashboard />}
-                    />
-
-                    <Route
-                        path="jobs"
-                        element={<ManageJobs />}
-                    />
-
-                    <Route
-                        path="jobs/create"
-                        element={<CreateJob />}
-                    />
-
-                    <Route
-                        path="jobs/:id/edit"
-                        element={<EditJob />}
-                    />
-
-                    <Route
-                        path="jobs/:jobId/applicants"
-                        element={<Applicants />}
-                    />
-
-                </Route>
-
-            </Routes>
+            </Suspense>
 
         </BrowserRouter>
 
