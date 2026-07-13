@@ -176,6 +176,14 @@ export const updateProfile = async (req, res) => {
     try {
         const { name, cgpa, branch, graduationYear, skills, contactNumber, resumeBase64, resumeName } = req.body;
 
+        // Fetch current user from DB to evaluate final state and perform Cloudinary cleanup
+        const currentUser = await User.findById(req.user.id);
+        if (!currentUser) {
+            return res.status(404).json({
+                message: "User not found"
+            });
+        }
+
         const updateData = {};
         if (name !== undefined) updateData.name = name;
         if (cgpa !== undefined) updateData.cgpa = cgpa;
@@ -192,6 +200,22 @@ export const updateProfile = async (req, res) => {
                 });
             }
 
+            // Cleanup old Cloudinary file if it exists
+            if (currentUser.resumeUrl) {
+                try {
+                    const regex = /\/upload\/(?:v\d+\/)?([^\.]+)/;
+                    const match = currentUser.resumeUrl.match(regex);
+                    const oldPublicId = match ? match[1] : null;
+
+                    if (oldPublicId) {
+                        await cloudinary.uploader.destroy(oldPublicId);
+                        console.log("Deleted old Cloudinary resume:", oldPublicId);
+                    }
+                } catch (deleteError) {
+                    console.error("Failed to delete old Cloudinary resume:", deleteError);
+                }
+            }
+
             const base64Data = resumeBase64.replace(/^data:application\/pdf;base64,/, "");
             const buffer = Buffer.from(base64Data, "base64");
 
@@ -203,7 +227,7 @@ export const updateProfile = async (req, res) => {
                 const stream = cloudinary.uploader.upload_stream(
                     {
                         folder: "resumes",
-                        resource_type: "auto", // Let Cloudinary auto-detect (treats PDF as image/document so it is served as application/pdf)
+                        resource_type: "auto", // Let Cloudinary auto-detect
                         public_id: publicId
                     },
                     (error, uploadResult) => {
@@ -220,13 +244,6 @@ export const updateProfile = async (req, res) => {
             updateData.resumeUrl = result.secure_url;
         }
 
-        // Fetch current user from DB to evaluate final state
-        const currentUser = await User.findById(req.user.id);
-        if (!currentUser) {
-            return res.status(404).json({
-                message: "User not found"
-            });
-        }
         const finalCgpa = cgpa !== undefined ? cgpa : currentUser.cgpa;
         const finalBranch = branch !== undefined ? branch : currentUser.branch;
         const finalGraduationYear = graduationYear !== undefined ? graduationYear : currentUser.graduationYear;
