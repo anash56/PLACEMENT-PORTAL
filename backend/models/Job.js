@@ -53,6 +53,10 @@ const jobSchema = new mongoose.Schema(
 );
 
 jobSchema.index({ createdBy: 1 });
+jobSchema.index({ salary: -1 });
+jobSchema.index({ createdAt: -1 });
+jobSchema.index({ title: "text", company: "text", description: "text" });
+
 
 const Job = mongoose.model("Job",jobSchema);
 

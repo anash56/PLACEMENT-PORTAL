@@ -51,12 +51,11 @@ export const getJobs = async (req, res) => {
 
         const query = {};
 
-        // Search by title
+        // Search by title, company, or description using Text Index
         if (keyword) {
 
-            query.title = {
-                $regex: keyword,
-                $options: "i"
+            query.$text = {
+                $search: keyword
             };
 
         }
@@ -79,7 +78,8 @@ export const getJobs = async (req, res) => {
                 .populate(
                     "createdBy",
                     "name email"
-                );
+                )
+                .lean();
 
         // Sort by salary
         if (sort === "salary") {
@@ -138,7 +138,9 @@ export const getJobById = async (req,res)=>{
     try{
 
         const job = await Job.findById(req.params.id)
-            .populate("createdBy","name email");
+            .populate("createdBy","name email")
+            .lean();
+
 
         if(!job){
             return res.status(404).json({

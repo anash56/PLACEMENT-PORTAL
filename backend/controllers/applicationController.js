@@ -17,7 +17,7 @@ export const applyJob = async (req, res) => {
         }
         const jobId = req.params.jobId;
 
-        const job = await Job.findById(jobId);
+        const job = await Job.findById(jobId).lean();
 
         if (!job) {
             return res.status(404).json({
@@ -26,7 +26,7 @@ export const applyJob = async (req, res) => {
         }
 
         // Fetch student profile details
-        const user = await User.findById(req.user.id);
+        const user = await User.findById(req.user.id).lean();
         if (!user) {
             return res.status(404).json({
                 message: "User not found"
@@ -73,7 +73,7 @@ export const applyJob = async (req, res) => {
             await Application.findOne({
                 student: req.user.id,
                 job: jobId
-            });
+            }).lean();
 
         if (existingApplication) {
             return res.status(400).json({
@@ -124,7 +124,8 @@ export const getMyApplications =
                     .populate("job")
                     .sort({ createdAt: -1 })
                     .skip(skip)
-                    .limit(limit);
+                    .limit(limit)
+                    .lean();
 
             res.status(200).json({
                 applications,
@@ -156,7 +157,8 @@ export const getApplicantsByJob =
                     .populate(
                         "student",
                         "name email cgpa branch graduationYear skills contactNumber resumeUrl"
-                    );
+                    )
+                    .lean();
 
             res.status(200).json(
                 applications
