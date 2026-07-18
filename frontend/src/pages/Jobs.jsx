@@ -491,6 +491,19 @@ function Jobs() {
                                                         </p>
                                                     )}
 
+                                                    {job.deadline && (
+                                                        <p>
+                                                            <span className="font-semibold text-gray-900">
+                                                                Deadline:
+                                                            </span>{" "}
+                                                            {new Date(job.deadline).toLocaleDateString("en-IN", {
+                                                                day: "numeric",
+                                                                month: "short",
+                                                                year: "numeric"
+                                                            })}
+                                                        </p>
+                                                    )}
+
                                                     {job.allowedBranches && job.allowedBranches.length > 0 && (
                                                         <p className="sm:col-span-2">
                                                             <span className="font-semibold text-gray-900">

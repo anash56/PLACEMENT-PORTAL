@@ -10,7 +10,10 @@ export const createJob = async (req,res)=>{
             company,
             location,
             salary,
-            description
+            description,
+            minCgpa,
+            allowedBranches,
+            deadline
         } = req.body;
 
         const job = await Job.create({
@@ -20,6 +23,9 @@ export const createJob = async (req,res)=>{
             location,
             salary,
             description,
+            minCgpa,
+            allowedBranches,
+            deadline,
 
             createdBy:req.user.id
 
