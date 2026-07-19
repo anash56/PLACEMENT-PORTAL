@@ -69,6 +69,34 @@ export const getDashboardStats =
                 minSalary: 0
             };
 
+            // 4. Placed student salary statistics (applications status: "Offered")
+            const placedSalaryAggregation = await Application.aggregate([
+                { $match: { status: "Offered" } },
+                {
+                    $lookup: {
+                        from: "jobs",
+                        localField: "job",
+                        foreignField: "_id",
+                        as: "jobDetails"
+                    }
+                },
+                { $unwind: "$jobDetails" },
+                {
+                    $group: {
+                        _id: null,
+                        averagePlacedSalary: { $avg: "$jobDetails.salary" },
+                        maxPlacedSalary: { $max: "$jobDetails.salary" },
+                        minPlacedSalary: { $min: "$jobDetails.salary" }
+                    }
+                }
+            ]);
+
+            const placedSalaryStats = placedSalaryAggregation[0] || {
+                averagePlacedSalary: 0,
+                maxPlacedSalary: 0,
+                minPlacedSalary: 0
+            };
+
             res.status(200).json({
 
                 totalStudents,
@@ -85,6 +113,12 @@ export const getDashboardStats =
                     averageSalary: Math.round(salaryStats.averageSalary),
                     maxSalary: salaryStats.maxSalary,
                     minSalary: salaryStats.minSalary
+                },
+
+                placedSalaryStats: {
+                    averagePlacedSalary: Math.round(placedSalaryStats.averagePlacedSalary),
+                    maxPlacedSalary: placedSalaryStats.maxPlacedSalary,
+                    minPlacedSalary: placedSalaryStats.minPlacedSalary
                 }
 
             });

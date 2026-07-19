@@ -46,6 +46,12 @@ function AdminDashboard() {
             averageSalary: 0,
             maxSalary: 0,
             minSalary: 0
+        },
+
+        placedSalaryStats: {
+            averagePlacedSalary: 0,
+            maxPlacedSalary: 0,
+            minPlacedSalary: 0
         }
 
     });
@@ -120,9 +126,9 @@ function AdminDashboard() {
         },
 
         {
-            label: "Average CTC",
-            value: `₹${(stats.salaryStats?.averageSalary || 0).toLocaleString("en-IN")}`,
-            description: "Average annual package"
+            label: "Avg Placed CTC",
+            value: `₹${(stats.placedSalaryStats?.averagePlacedSalary || 0).toLocaleString("en-IN")}`,
+            description: "Actual secured packages"
         },
 
         {
@@ -322,19 +328,46 @@ function AdminDashboard() {
                                         )}
                                     </Card>
 
-                                    <Card>
-                                        <h2 className="text-lg font-bold text-gray-900 mb-5 border-b border-gray-100 pb-3">Salary Statistics</h2>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="rounded-lg bg-gray-50 p-4 text-center">
-                                                <p className="text-xs font-medium text-gray-500">MAXIMUM CTC</p>
-                                                <p className="mt-1 text-lg font-bold text-blue-600">₹{(stats.salaryStats?.maxSalary || 0).toLocaleString("en-IN")}</p>
-                                            </div>
-                                            <div className="rounded-lg bg-gray-50 p-4 text-center">
-                                                <p className="text-xs font-medium text-gray-500">MINIMUM CTC</p>
-                                                <p className="mt-1 text-lg font-bold text-blue-600">₹{(stats.salaryStats?.minSalary || 0).toLocaleString("en-IN")}</p>
-                                            </div>
-                                        </div>
-                                    </Card>
+                                     <Card>
+                                         <h2 className="text-lg font-bold text-gray-900 mb-5 border-b border-gray-100 pb-3">Salary Statistics</h2>
+                                         <div className="space-y-6">
+                                             <div>
+                                                 <h3 className="text-sm font-semibold text-gray-700 mb-2.5">Posted Jobs (Market)</h3>
+                                                 <div className="grid grid-cols-3 gap-3">
+                                                     <div className="rounded-lg bg-gray-50 p-3 text-center">
+                                                         <p className="text-[10px] font-medium text-gray-500 uppercase">Average</p>
+                                                         <p className="mt-0.5 text-sm font-bold text-gray-800">₹{(stats.salaryStats?.averageSalary || 0).toLocaleString("en-IN")}</p>
+                                                     </div>
+                                                     <div className="rounded-lg bg-gray-50 p-3 text-center">
+                                                         <p className="text-[10px] font-medium text-gray-500 uppercase">Maximum</p>
+                                                         <p className="mt-0.5 text-sm font-bold text-blue-600">₹{(stats.salaryStats?.maxSalary || 0).toLocaleString("en-IN")}</p>
+                                                     </div>
+                                                     <div className="rounded-lg bg-gray-50 p-3 text-center">
+                                                         <p className="text-[10px] font-medium text-gray-500 uppercase">Minimum</p>
+                                                         <p className="mt-0.5 text-sm font-bold text-gray-600">₹{(stats.salaryStats?.minSalary || 0).toLocaleString("en-IN")}</p>
+                                                     </div>
+                                                 </div>
+                                             </div>
+
+                                             <div>
+                                                 <h3 className="text-sm font-semibold text-green-700 mb-2.5">Placed Students (Actual)</h3>
+                                                 <div className="grid grid-cols-3 gap-3">
+                                                     <div className="rounded-lg bg-green-50/40 p-3 text-center border border-green-100/30">
+                                                         <p className="text-[10px] font-medium text-green-600 uppercase">Average</p>
+                                                         <p className="mt-0.5 text-sm font-bold text-green-800">₹{(stats.placedSalaryStats?.averagePlacedSalary || 0).toLocaleString("en-IN")}</p>
+                                                     </div>
+                                                     <div className="rounded-lg bg-green-50/40 p-3 text-center border border-green-100/30">
+                                                         <p className="text-[10px] font-medium text-green-600 uppercase">Maximum</p>
+                                                         <p className="mt-0.5 text-sm font-bold text-green-700">₹{(stats.placedSalaryStats?.maxPlacedSalary || 0).toLocaleString("en-IN")}</p>
+                                                     </div>
+                                                     <div className="rounded-lg bg-green-50/40 p-3 text-center border border-green-100/30">
+                                                         <p className="text-[10px] font-medium text-green-600 uppercase">Minimum</p>
+                                                         <p className="mt-0.5 text-sm font-bold text-green-800">₹{(stats.placedSalaryStats?.minPlacedSalary || 0).toLocaleString("en-IN")}</p>
+                                                     </div>
+                                                 </div>
+                                             </div>
+                                         </div>
+                                     </Card>
                                 </div>
                             </div>
 
