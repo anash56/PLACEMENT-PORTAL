@@ -41,10 +41,15 @@ export const applyJob = async (req, res) => {
         }
 
         // 2. Check Job Deadline
-        if (job.deadline && new Date() > new Date(job.deadline)) {
-            return res.status(400).json({
-                message: "The application deadline for this job has passed."
-            });
+        if (job.deadline) {
+            const deadlineDate = new Date(job.deadline);
+            // Set the deadline to the absolute end of the day (23:59:59.999) of the deadline date
+            deadlineDate.setHours(23, 59, 59, 999);
+            if (new Date() > deadlineDate) {
+                return res.status(400).json({
+                    message: "The application deadline for this job has passed."
+                });
+            }
         }
 
         // 3. Check CGPA eligibility
