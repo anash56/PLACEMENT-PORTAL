@@ -52,6 +52,14 @@ const userSchema = new mongoose.Schema(
     isProfileCompleted:{
         type:Boolean,
         default:false
+    },
+
+    resetPasswordToken:{
+        type:String
+    },
+
+    resetPasswordExpire:{
+        type:Date
     }
 },
 {

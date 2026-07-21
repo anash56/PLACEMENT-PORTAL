@@ -12,6 +12,7 @@ import {
 
 const Login = lazy(() => import("./pages/Login"));
 const Register = lazy(() => import("./pages/Register"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const Jobs = lazy(() => import("./pages/Jobs"));
 const MyApplications = lazy(() => import("./pages/MyApplications"));
 const Profile = lazy(() => import("./pages/Profile"));
@@ -85,6 +86,11 @@ function App() {
                         <Route
                             path="/register"
                             element={<Register />}
+                        />
+
+                        <Route
+                            path="/reset-password/:token"
+                            element={<ResetPassword />}
                         />
 
                         <Route

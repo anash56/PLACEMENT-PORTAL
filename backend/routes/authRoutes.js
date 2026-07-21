@@ -1,5 +1,5 @@
 import express from 'express';
-import { register, login, logout, getMe, updateProfile } from '../controllers/authController.js';
+import { register, login, logout, getMe, updateProfile, forgotPassword, resetPassword } from '../controllers/authController.js';
 import protect from "../middleware/authMiddleware.js";
 import adminOnly from "../middleware/adminMiddleware.js";
 import { validateProfileUpdate } from "../middleware/validation.js";
@@ -8,26 +8,9 @@ import { validateProfileUpdate } from "../middleware/validation.js";
 const router = express.Router();
 
 router.post("/register", register);
-
-//register flow;
-// Request
-//    ↓
-// server.js
-//    ↓
-// app.use("/api/auth", authRoutes)
-//    ↓
-// authRoutes.js
-//    ↓
-// router.post("/register")
-//    ↓
-// authController.js
-//    ↓
-// register()
-//    ↓
-// Response
-
-
 router.post("/login", login);
+router.post("/forgot-password", forgotPassword);
+router.post("/reset-password/:token", resetPassword);
 
 router.get("/profile", protect, (req, res) => {
     res.json({
