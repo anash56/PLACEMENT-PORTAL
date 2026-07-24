@@ -57,13 +57,14 @@ export const getJobs = async (req, res) => {
 
         const query = {};
 
-        // Search by title, company, or description using Text Index
+        // Search by title, company, or description using partial regex matching
         if (keyword) {
-
-            query.$text = {
-                $search: keyword
-            };
-
+            const regex = new RegExp(keyword, "i");
+            query.$or = [
+                { title: regex },
+                { company: regex },
+                { description: regex }
+            ];
         }
 
         // Filter by location
