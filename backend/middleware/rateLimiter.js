@@ -2,11 +2,10 @@
  * Simple sliding window rate limiter middleware.
  * Stores hit timestamps in memory keyed by client IP.
  */
-const rateLimiter = (options) => {
+export const createRateLimiter = (options) => {
     const { windowMs, max, message } = options;
     const hits = new Map();
 
-    // Periodically clean up memory for inactive IPs
     setInterval(() => {
         const now = Date.now();
         for (const [ip, timestamps] of hits.entries()) {
@@ -27,7 +26,6 @@ const rateLimiter = (options) => {
             hits.set(ip, []);
         }
 
-        // Filter out timestamps older than the sliding window
         const userHits = hits.get(ip).filter(timestamp => now - timestamp < windowMs);
 
         if (userHits.length >= max) {
@@ -42,4 +40,17 @@ const rateLimiter = (options) => {
     };
 };
 
-export default rateLimiter;
+// Pre-configured Rate Limiters driven by environment variables with fallback defaults
+export const authRateLimiter = createRateLimiter({
+    windowMs: Number(process.env.AUTH_RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
+    max: Number(process.env.AUTH_RATE_LIMIT_MAX) || 20, // max 20 auth requests per window
+    message: "Too many authentication requests from this IP. Please try again after 15 minutes."
+});
+
+export const globalRateLimiter = createRateLimiter({
+    windowMs: Number(process.env.GLOBAL_RATE_LIMIT_WINDOW_MS) || 1 * 60 * 1000, // 1 minute
+    max: Number(process.env.GLOBAL_RATE_LIMIT_MAX) || 100, // max 100 requests per minute
+    message: "Too many requests. Please try again in a minute."
+});
+
+export default createRateLimiter;

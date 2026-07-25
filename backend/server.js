@@ -1,29 +1,18 @@
 import "dotenv/config";
 import express from "express";
-import dotenv from "dotenv";
-import connectDB from "./config/db.js";
 import cors from "cors";
+import connectDB from "./config/db.js";
+
+// Routes
 import authRoutes from "./routes/authRoutes.js";
 import jobRoutes from "./routes/jobRoutes.js";
 import applicationRoutes from "./routes/applicationRoutes.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
+
+// Middlewares
 import nosqlSanitize from "./middleware/security.js";
-import rateLimiter from "./middleware/rateLimiter.js";
-
-dotenv.config();
-
-// Initialize custom rate limiters
-const authRateLimiter = rateLimiter({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 20, // max 20 auth requests per 15 minutes per IP
-    message: "Too many authentication requests from this IP. Please try again after 15 minutes."
-});
-
-const globalRateLimiter = rateLimiter({
-    windowMs: 1 * 60 * 1000, // 1 minute
-    max: 100, // max 100 API requests per minute per IP
-    message: "Too many requests. Please try again in a minute."
-});
+import { globalRateLimiter, authRateLimiter } from "./middleware/rateLimiter.js";
+import { notFoundHandler, errorHandler } from "./middleware/errorHandler.js";
 
 const startServer = async () => {
     await connectDB();
@@ -44,31 +33,29 @@ const startServer = async () => {
     app.use(nosqlSanitize);
     app.use(globalRateLimiter);
 
-    app.use("/uploads", express.static("public/uploads"));
-
+    // Root Healthcheck Route
     app.get("/", (req, res) => {
-        res.send("Server is running");
+        res.send("Placement Portal API is running");
     });
 
-    // Apply strict rate limiting to auth routes
+    // API Routes
     app.use("/api/auth", authRateLimiter, authRoutes);
-
     app.use("/api/jobs", jobRoutes);
-
     app.use("/api/applications", applicationRoutes);
-
     app.use("/api/dashboard", dashboardRoutes);
 
-    // Centralized Global Error Handler Middleware
-    app.use((err, req, res, next) => {
-        console.error(err.stack);
-        res.status(err.status || 500).json({
-            message: err.message || "Internal Server Error"
-        });
+    // 404 & Centralized Global Error Handlers
+    app.use(notFoundHandler);
+    app.use(errorHandler);
+
+    const PORT = process.env.PORT || 5000;
+    const server = app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
     });
 
-    app.listen(process.env.PORT, () => {
-        console.log(`Server running on port ${process.env.PORT}`);
+    // Handle unhandled promise rejections
+    process.on("unhandledRejection", (err) => {
+        console.error("Unhandled Rejection:", err);
     });
 };
 

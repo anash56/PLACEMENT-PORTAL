@@ -90,10 +90,10 @@ function Jobs() {
 
             );
 
-            setJobs(res.data.jobs);
+            setJobs(Array.isArray(res.data?.jobs) ? res.data.jobs : []);
 
             setTotalPages(
-                res.data.totalPages
+                res.data?.totalPages || 1
             );
 
         }
