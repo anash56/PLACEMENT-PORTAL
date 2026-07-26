@@ -29,7 +29,7 @@ function Button({
             type={type}
             disabled={disabled}
             onClick={onClick}
-            className={`${baseStyles} ${variants[variant]} ${className}`}
+            className={`${baseStyles} ${variants[variant] || variants.primary} ${className}`}
         >
 
             {children}
