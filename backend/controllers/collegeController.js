@@ -1,0 +1,11 @@
+import * as collegeService from "../services/collegeService.js";
+const sendError = (res, error) => res.status(error.statusCode || 500).json({ message: error.message || "Request failed." });
+export const submitRequest = async (req, res) => { try { const college = await collegeService.submitCollegeRequest(req.body); return res.status(201).json({ message: "College request submitted for review.", college: { id: String(college._id), name: college.name, status: college.status } }); } catch (e) { return sendError(res, e); } };
+export const searchApproved = async (req, res) => { try { return res.json({ colleges: await collegeService.searchApprovedColleges(req.query.q) }); } catch (e) { return sendError(res, e); } };
+export const list = async (req, res) => { try { return res.json({ colleges: await collegeService.listColleges(req.query.status) }); } catch (e) { return sendError(res, e); } };
+const review = action => async (req, res) => { try { const result = await collegeService.reviewCollege(req.params.id, action, req.body.reason, req.user.id); return res.json({ message: action === "approve" ? "College approved." : `College ${action}d.`, ...result }); } catch (e) { return sendError(res, e); } };
+export const approve = review("approve");
+export const reject = review("reject");
+export const suspend = review("suspend");
+export const restore = review("restore");
+export const invite = async (req, res) => { try { return res.json({ message: "Invitation processed.", invitation: await collegeService.inviteCollegeAdmin(req.params.id, req.user.id) }); } catch (e) { return sendError(res, e); } };

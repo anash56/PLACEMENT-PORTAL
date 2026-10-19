@@ -1,0 +1,15 @@
+import { useCallback, useEffect, useState } from "react";
+import toast from "react-hot-toast";
+import api from "../services/api";
+import PageContainer from "../components/ui/PageContainer";
+import Card from "../components/ui/Card";
+import Button from "../components/ui/Button";
+import Input from "../components/ui/Input";
+export default function VerificationQueue() {
+    const [students, setStudents] = useState([]); const [reasons, setReasons] = useState({}); const [loading, setLoading] = useState(true);
+    const load = useCallback(async () => { try { setLoading(true); const result = await api.get("/verification/queue"); setStudents(result.data.students || []); } catch (error) { toast.error(error.response?.data?.message || "Could not load verification queue."); } finally { setLoading(false); } }, []);
+    useEffect(() => { load(); }, [load]);
+    const decide = async (student, action) => { const reason = reasons[student._id] || ""; if (action === "reject" && !reason.trim()) return toast.error("Enter a rejection reason."); try { await api.patch(`/verification/${student._id}/${action}`, { reason }); toast.success(action === "approve" ? "Student verified." : "Verification rejected."); await load(); } catch (error) { toast.error(error.response?.data?.message || "Could not update verification."); } };
+    const viewId = async student => { try { const result = await api.get(`/verification/${student._id}/id-card`); window.open(result.data.url, "_blank", "noopener,noreferrer"); } catch (error) { toast.error(error.response?.data?.message || "Could not access ID card."); } };
+    return <PageContainer><div className="mb-6"><h1 className="text-3xl font-bold">Student Verification</h1><p className="mt-1 text-sm text-gray-500">Review affiliation documents from students registered to your college.</p></div>{loading ? <Card>Loading requests…</Card> : students.length === 0 ? <Card><p className="py-8 text-center text-gray-500">No verification requests.</p></Card> : <div className="space-y-4">{students.map(student => <Card key={student._id}><div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-lg font-semibold">{student.name}</h2><p className="text-sm text-gray-500">{student.email}</p><p className="mt-1 text-sm">{student.branch || "Branch not set"} · CGPA {student.cgpa ?? "—"} · Batch {student.graduationYear ?? "—"}</p><p className="mt-1 text-xs uppercase text-gray-500">Status: {student.verificationStatus}</p>{student.verificationRejectionReason && <p className="mt-1 text-sm text-red-600">Previous reason: {student.verificationRejectionReason}</p>}</div><Button variant="secondary" onClick={() => viewId(student)}>View ID card</Button></div><div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto_auto]"><Input aria-label="Rejection reason" placeholder="Reason if rejecting" value={reasons[student._id] || ""} onChange={e => setReasons(prev => ({ ...prev, [student._id]: e.target.value }))} /><Button onClick={() => decide(student, "approve")}>Verify student</Button><Button variant="secondary" onClick={() => decide(student, "reject")}>Reject</Button></div></Card>)}</div>}</PageContainer>;
+}
