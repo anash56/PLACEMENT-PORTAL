@@ -1,0 +1,12 @@
+import express from "express";
+import protect from "../middleware/authMiddleware.js";
+import { collegeAdminOnly } from "../middleware/adminMiddleware.js";
+import { csrfProtect } from "../middleware/csrfMiddleware.js";
+import * as controller from "../controllers/verificationController.js";
+const router = express.Router();
+router.post("/resubmit", protect, csrfProtect, (req, res, next) => req.user.role === "student" ? next() : res.status(403).json({ message: "Student access required." }), controller.resubmit);
+router.get("/queue", protect, collegeAdminOnly, controller.queue);
+router.patch("/:studentId/approve", protect, collegeAdminOnly, csrfProtect, controller.approve);
+router.patch("/:studentId/reject", protect, collegeAdminOnly, csrfProtect, controller.reject);
+router.get("/:studentId/id-card", protect, collegeAdminOnly, controller.idCard);
+export default router;
