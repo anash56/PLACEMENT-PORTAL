@@ -1,483 +1,228 @@
-import {
-    useEffect,
-    useState
-} from "react";
-
-import {
-    useNavigate
-} from "react-router-dom";
-
+import { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import api from "../services/api";
-
 import { useAuth } from "../context/AuthContext";
-
 import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
 import PageContainer from "../components/ui/PageContainer";
+import DashboardStatCard from "../components/admin/dashboard/DashboardStatCard";
+import NeedsAttentionPanel from "../components/admin/dashboard/NeedsAttentionPanel";
+import PlacementAnalytics from "../components/admin/dashboard/PlacementAnalytics";
+import RecentActivity from "../components/admin/dashboard/RecentActivity";
 
+const EMPTY_STATS = {
+    totalStudents: 0,
+    totalJobs: 0,
+    totalApplications: 0,
+    pendingStudentVerifications: 0,
+    upcomingDeadlineCount: 0,
+    upcomingDeadlines: [],
+    recentJobs: [],
+    recentApplications: [],
+    statusBreakdown: {
+        Pending: 0,
+        "Test Scheduled": 0,
+        "Interview Scheduled": 0,
+        Shortlisted: 0,
+        Offered: 0,
+        Rejected: 0,
+    },
+    branchBreakdown: [],
+    salaryStats: { averageSalary: 0, maxSalary: 0, minSalary: 0 },
+    placedSalaryStats: { averagePlacedSalary: 0, maxPlacedSalary: 0, minPlacedSalary: 0 },
+};
 
-function AdminDashboard() {
-
-    const navigate = useNavigate();
-
-    const { user } = useAuth();
-
-
-    const [stats, setStats] = useState({
-
-        totalStudents: 0,
-
-        totalJobs: 0,
-
-        totalApplications: 0,
-
-        statusBreakdown: {
-            Pending: 0,
-            "Test Scheduled": 0,
-            "Interview Scheduled": 0,
-            Shortlisted: 0,
-            Offered: 0,
-            Rejected: 0
-        },
-
-        branchBreakdown: [],
-
-        salaryStats: {
-            averageSalary: 0,
-            maxSalary: 0,
-            minSalary: 0
-        },
-
-        placedSalaryStats: {
-            averagePlacedSalary: 0,
-            maxPlacedSalary: 0,
-            minPlacedSalary: 0
-        }
-
-    });
-
-
-    const [loading, setLoading] = useState(true);
-
-    const [error, setError] = useState("");
-
-
-    useEffect(() => {
-
-        fetchDashboardStats();
-
-    }, []);
-
-
-    const fetchDashboardStats = async () => {
-
-        try {
-
-            setLoading(true);
-
-            setError("");
-
-
-            const res = await api.get(
-
-                "/dashboard/stats"
-
-            );
-
-
-            setStats(res.data);
-
-        }
-
-        catch (error) {
-
-            console.log(
-                error.response?.data
-            );
-
-
-            setError(
-
-                error.response?.data?.message
-
-                ||
-
-                "Failed to load dashboard statistics."
-
-            );
-
-        }
-
-        finally {
-
-            setLoading(false);
-
-        }
-
+function mergeStats(data = {}) {
+    return {
+        ...EMPTY_STATS,
+        ...data,
+        statusBreakdown: { ...EMPTY_STATS.statusBreakdown, ...(data.statusBreakdown || {}) },
+        salaryStats: { ...EMPTY_STATS.salaryStats, ...(data.salaryStats || {}) },
+        placedSalaryStats: { ...EMPTY_STATS.placedSalaryStats, ...(data.placedSalaryStats || {}) },
+        branchBreakdown: Array.isArray(data.branchBreakdown) ? data.branchBreakdown : [],
+        upcomingDeadlines: Array.isArray(data.upcomingDeadlines) ? data.upcomingDeadlines : [],
+        recentJobs: Array.isArray(data.recentJobs) ? data.recentJobs : [],
+        recentApplications: Array.isArray(data.recentApplications) ? data.recentApplications : [],
     };
-
-
-    const statCards = [
-
-        {
-            label: "Total Students",
-            value: stats.totalStudents,
-            description: "Registered student accounts"
-        },
-
-        {
-            label: "Avg Placed CTC",
-            value: `₹${(stats.placedSalaryStats?.averagePlacedSalary || 0).toLocaleString("en-IN")}`,
-            description: "Actual secured packages"
-        },
-
-        {
-            label: "Total Jobs",
-            value: stats.totalJobs,
-            description: "Published job opportunities"
-        },
-
-        {
-            label: "Total Applications",
-            value: stats.totalApplications,
-            description: "Applications submitted by students"
-        }
-
-    ];
-
-
-    return (
-
-        <PageContainer>
-
-            <div className="mb-8">
-
-                <h1 className="text-3xl font-bold text-gray-900">
-
-                    Admin Dashboard
-
-                </h1>
-
-
-                <p className="mt-2 text-sm text-gray-500">
-
-                    Welcome back, {user?.name || "Admin"}.
-                    Here is an overview of your placement portal.
-
-                </p>
-
-            </div>
-
-
-            {
-                loading
-
-                    ?
-
-                    <Card>
-
-                        <p className="text-center text-gray-500">
-
-                            Loading dashboard...
-
-                        </p>
-
-                    </Card>
-
-
-                    :
-
-                    error
-
-                        ?
-
-                        <Card>
-
-                            <div className="py-6 text-center">
-
-                                <h2 className="text-lg font-semibold text-gray-900">
-
-                                    Unable to Load Dashboard
-
-                                </h2>
-
-
-                                <p className="mt-2 text-sm text-gray-500">
-
-                                    {error}
-
-                                </p>
-
-
-                                <div className="mt-4">
-
-                                    <Button
-                                        onClick={fetchDashboardStats}
-                                    >
-
-                                        Try Again
-
-                                    </Button>
-
-                                </div>
-
-                            </div>
-
-                        </Card>
-
-
-                        :
-
-                        <>
-
-                            <div
-                                className="
-                                    grid
-                                    gap-4
-                                    sm:grid-cols-2
-                                    xl:grid-cols-4
-                                "
-                            >
-
-                                {
-
-                                    statCards.map((stat) => (
-
-                                        <Card
-                                            key={stat.label}
-                                            className="h-full"
-                                        >
-
-                                            <p className="text-sm font-medium text-gray-500">
-
-                                                {stat.label}
-
-                                            </p>
-
-
-                                            <p className="mt-3 text-3xl font-bold text-gray-900">
-
-                                                {stat.value}
-
-                                            </p>
-
-
-                                            <p className="mt-2 text-sm text-gray-500">
-
-                                                {stat.description}
-
-                                            </p>
-
-                                        </Card>
-
-                                    ))
-
-                                }
-
-                            </div>
-
-                            {/* Rich Analytics Widgets */}
-                            <div className="mt-8 grid gap-6 lg:grid-cols-2">
-                                {/* Application pipeline metrics */}
-                                <Card>
-                                    <h2 className="text-lg font-bold text-gray-900 mb-5 border-b border-gray-100 pb-3">Recruitment Pipeline</h2>
-                                    <div className="space-y-4">
-                                        {Object.entries(stats.statusBreakdown || {}).map(([status, count]) => {
-                                            const percentage = stats.totalApplications > 0 ? (count / stats.totalApplications) * 100 : 0;
-                                            return (
-                                                <div key={status}>
-                                                    <div className="flex justify-between text-sm mb-1.5">
-                                                        <span className="font-semibold text-gray-600">{status}</span>
-                                                        <span className="font-bold text-gray-900">{count} ({Math.round(percentage)}%)</span>
-                                                    </div>
-                                                    <div className="w-full bg-gray-100 rounded-full h-2">
-                                                        <div 
-                                                            className={`h-2 rounded-full transition-all duration-500 ${
-                                                                status === "Offered" || status === "Shortlisted" 
-                                                                    ? "bg-green-500" 
-                                                                    : status === "Rejected" 
-                                                                        ? "bg-red-500" 
-                                                                        : "bg-blue-500"
-                                                            }`} 
-                                                            style={{ width: `${percentage}%` }}
-                                                        ></div>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </Card>
-
-                                {/* Student Branch & Salary Stats */}
-                                <div className="space-y-6">
-                                    <Card>
-                                        <h2 className="text-lg font-bold text-gray-900 mb-5 border-b border-gray-100 pb-3">Branch Distribution</h2>
-                                        {stats.branchBreakdown && stats.branchBreakdown.length > 0 ? (
-                                            <div className="max-h-48 overflow-y-auto space-y-3">
-                                                {stats.branchBreakdown.map((branch, idx) => (
-                                                    <div key={idx} className="flex justify-between items-center text-sm">
-                                                        <span className="font-medium text-gray-600">{branch.name}</span>
-                                                        <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-700">
-                                                            {branch.value} student{branch.value > 1 ? "s" : ""}
-                                                        </span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        ) : (
-                                            <p className="text-sm text-gray-500 text-center py-4">No student branch data available.</p>
-                                        )}
-                                    </Card>
-
-                                     <Card>
-                                         <h2 className="text-lg font-bold text-gray-900 mb-5 border-b border-gray-100 pb-3">Salary Statistics</h2>
-                                         <div className="space-y-6">
-                                             <div>
-                                                 <h3 className="text-sm font-semibold text-gray-700 mb-2.5">Posted Jobs (Market)</h3>
-                                                 <div className="grid grid-cols-3 gap-3">
-                                                     <div className="rounded-lg bg-gray-50 p-3 text-center">
-                                                         <p className="text-[10px] font-medium text-gray-500 uppercase">Average</p>
-                                                         <p className="mt-0.5 text-sm font-bold text-gray-800">₹{(stats.salaryStats?.averageSalary || 0).toLocaleString("en-IN")}</p>
-                                                     </div>
-                                                     <div className="rounded-lg bg-gray-50 p-3 text-center">
-                                                         <p className="text-[10px] font-medium text-gray-500 uppercase">Maximum</p>
-                                                         <p className="mt-0.5 text-sm font-bold text-blue-600">₹{(stats.salaryStats?.maxSalary || 0).toLocaleString("en-IN")}</p>
-                                                     </div>
-                                                     <div className="rounded-lg bg-gray-50 p-3 text-center">
-                                                         <p className="text-[10px] font-medium text-gray-500 uppercase">Minimum</p>
-                                                         <p className="mt-0.5 text-sm font-bold text-gray-600">₹{(stats.salaryStats?.minSalary || 0).toLocaleString("en-IN")}</p>
-                                                     </div>
-                                                 </div>
-                                             </div>
-
-                                             <div>
-                                                 <h3 className="text-sm font-semibold text-green-700 mb-2.5">Placed Students (Actual)</h3>
-                                                 <div className="grid grid-cols-3 gap-3">
-                                                     <div className="rounded-lg bg-green-50/40 p-3 text-center border border-green-100/30">
-                                                         <p className="text-[10px] font-medium text-green-600 uppercase">Average</p>
-                                                         <p className="mt-0.5 text-sm font-bold text-green-800">₹{(stats.placedSalaryStats?.averagePlacedSalary || 0).toLocaleString("en-IN")}</p>
-                                                     </div>
-                                                     <div className="rounded-lg bg-green-50/40 p-3 text-center border border-green-100/30">
-                                                         <p className="text-[10px] font-medium text-green-600 uppercase">Maximum</p>
-                                                         <p className="mt-0.5 text-sm font-bold text-green-700">₹{(stats.placedSalaryStats?.maxPlacedSalary || 0).toLocaleString("en-IN")}</p>
-                                                     </div>
-                                                     <div className="rounded-lg bg-green-50/40 p-3 text-center border border-green-100/30">
-                                                         <p className="text-[10px] font-medium text-green-600 uppercase">Minimum</p>
-                                                         <p className="mt-0.5 text-sm font-bold text-green-800">₹{(stats.placedSalaryStats?.minPlacedSalary || 0).toLocaleString("en-IN")}</p>
-                                                     </div>
-                                                 </div>
-                                             </div>
-                                         </div>
-                                     </Card>
-                                </div>
-                            </div>
-
-
-                            <div className="mt-8">
-
-                                <h2 className="text-xl font-semibold text-gray-900">
-
-                                    Quick Actions
-
-                                </h2>
-
-
-                                <p className="mt-1 text-sm text-gray-500">
-
-                                    Access common administrative tasks.
-
-                                </p>
-
-
-                                <div
-                                    className="
-                                        mt-4
-                                        grid
-                                        gap-4
-                                        md:grid-cols-2
-                                    "
-                                >
-
-                                    <Card>
-
-                                        <h3 className="text-lg font-semibold text-gray-900">
-
-                                            Manage Jobs
-
-                                        </h3>
-
-
-                                        <p className="mt-2 text-sm leading-6 text-gray-500">
-
-                                            Review existing jobs, search listings,
-                                            view applicants, edit job information,
-                                            or remove opportunities.
-
-                                        </p>
-
-
-                                        <div className="mt-5">
-
-                                            <Button
-                                                onClick={() =>
-                                                    navigate("/admin/jobs")
-                                                }
-                                            >
-
-                                                Manage Jobs
-
-                                            </Button>
-
-                                        </div>
-
-                                    </Card>
-
-
-                                    <Card>
-
-                                        <h3 className="text-lg font-semibold text-gray-900">
-
-                                            Create Job
-
-                                        </h3>
-
-
-                                        <p className="mt-2 text-sm leading-6 text-gray-500">
-
-                                            Publish a new job opportunity for
-                                            students using the placement portal.
-
-                                        </p>
-
-
-                                        <div className="mt-5">
-
-                                            <Button
-                                                onClick={() =>
-                                                    navigate("/admin/jobs/create")
-                                                }
-                                            >
-
-                                                Create Job
-
-                                            </Button>
-
-                                        </div>
-
-                                    </Card>
-
-                                </div>
-
-                            </div>
-
-                        </>
-
-            }
-
-        </PageContainer>
-
-    );
-
 }
 
+function AdminDashboard() {
+    const navigate = useNavigate();
+    const { user } = useAuth();
+    const [stats, setStats] = useState(EMPTY_STATS);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
+
+    const fetchDashboardStats = useCallback(async () => {
+        try {
+            setLoading(true);
+            setError("");
+            const { data } = await api.get("/dashboard/stats");
+            setStats(mergeStats(data));
+        } catch (requestError) {
+            setError(
+                requestError.response?.data?.message ||
+                "Failed to load dashboard statistics.",
+            );
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchDashboardStats();
+    }, [fetchDashboardStats]);
+
+    const totalStudents = Number(stats.totalStudents || 0);
+    const totalJobs = Number(stats.totalJobs || 0);
+    const totalApplications = Number(stats.totalApplications || 0);
+    const pendingApplications = Number(stats.statusBreakdown?.Pending || 0);
+    const offeredApplications = Number(stats.statusBreakdown?.Offered || 0);
+
+    const statCards = [
+        {
+            label: "Total students",
+            value: totalStudents.toLocaleString("en-IN"),
+            description: "Student accounts registered with your college",
+        },
+        {
+            label: "Average placed CTC",
+            value: offeredApplications > 0
+                ? `₹${Number(stats.placedSalaryStats?.averagePlacedSalary || 0).toLocaleString("en-IN")}`
+                : "—",
+            description: offeredApplications > 0
+                ? "Average package for applications marked Offered"
+                : "Appears when an application reaches Offered",
+            tone: "success",
+        },
+        {
+            label: "Total jobs",
+            value: totalJobs.toLocaleString("en-IN"),
+            description: "Job opportunities in your college workspace",
+            actionLabel: "Manage jobs",
+            onAction: () => navigate("/admin/jobs"),
+        },
+        {
+            label: "Total applications",
+            value: totalApplications.toLocaleString("en-IN"),
+            description: "Applications received by your college's jobs",
+            actionLabel: "Review applicants",
+            onAction: () => navigate("/admin/jobs"),
+        },
+    ];
+
+    return (
+        <PageContainer>
+            <header className="relative isolate mb-7 overflow-hidden rounded-[26px] bg-[linear-gradient(125deg,#071b3b_0%,#0b2e61_55%,#1456a3_100%)] p-6 text-white shadow-[0_18px_50px_rgba(13,54,111,.15)] sm:p-8 lg:p-9">
+                <div className="pointer-events-none absolute -right-16 -top-24 -z-10 h-64 w-64 rounded-full border border-white/15 shadow-[0_0_0_32px_rgba(255,255,255,.035),0_0_0_68px_rgba(255,255,255,.025)]" />
+                <p className="text-xs font-extrabold uppercase tracking-[.2em] text-blue-200">
+                    College placement workspace
+                </p>
+                <div className="mt-3 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+                    <div className="max-w-2xl">
+                        <h1 className="text-3xl font-extrabold leading-tight tracking-[-.04em] text-white sm:text-4xl">
+                            Admin dashboard
+                        </h1>
+                        <p className="mt-2 text-sm leading-6 text-blue-100/90 sm:text-base">
+                            Welcome back, {user?.name || "Admin"}. Here is your college placement overview.
+                        </p>
+                        {user?.collegeName && (
+                            <p className="mt-3 inline-flex max-w-full items-center rounded-full border border-white/15 bg-white/[.07] px-3 py-1.5 text-xs font-semibold text-blue-50">
+                                <span className="truncate">{user.collegeName}</span>
+                            </p>
+                        )}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                        <Button
+                            variant="secondary"
+                            onClick={() => navigate("/admin/jobs/create")}
+                            className="!border-white/70 !bg-white !text-blue-900 hover:!bg-blue-50"
+                        >
+                            Create job
+                        </Button>
+                        <Button
+                            variant="secondary"
+                            onClick={() => navigate("/admin/jobs")}
+                            className="!border-white/30 !bg-white/10 !text-white hover:!bg-white/15"
+                        >
+                            Manage jobs
+                        </Button>
+                    </div>
+                </div>
+            </header>
+
+            {loading ? (
+                <div className="space-y-7" aria-label="Loading dashboard" aria-busy="true">
+                    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                        {[1, 2, 3, 4].map(item => (
+                            <Card key={item} className="!rounded-2xl !p-5">
+                                <div className="h-4 w-2/5 animate-pulse rounded bg-slate-100" />
+                                <div className="mt-4 h-8 w-3/5 animate-pulse rounded bg-slate-100" />
+                                <div className="mt-3 h-3 w-4/5 animate-pulse rounded bg-slate-100" />
+                            </Card>
+                        ))}
+                    </div>
+                    <Card className="!rounded-2xl">
+                        <p className="text-sm text-slate-500">Loading placement statistics…</p>
+                    </Card>
+                </div>
+            ) : error ? (
+                <Card className="!rounded-2xl !border-red-100">
+                    <div className="py-7 text-center">
+                        <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-red-50 text-lg font-bold text-red-700" aria-hidden="true">
+                            !
+                        </div>
+                        <h2 className="mt-4 text-lg font-bold text-slate-900">Unable to load dashboard</h2>
+                        <p className="mt-2 text-sm leading-6 text-slate-600">{error}</p>
+                        <Button className="mt-5" onClick={fetchDashboardStats}>Try again</Button>
+                    </div>
+                </Card>
+            ) : (
+                <>
+                    <section aria-label="Placement overview">
+                        <div className="mb-4">
+                            <h2 className="text-xl font-extrabold text-slate-900">Placement overview</h2>
+                            <p className="mt-1 text-sm text-slate-500">
+                                A snapshot of students, jobs, applications, and outcomes.
+                            </p>
+                        </div>
+                        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                            {statCards.map(stat => (
+                                <DashboardStatCard key={stat.label} {...stat} />
+                            ))}
+                        </div>
+                    </section>
+
+                    <NeedsAttentionPanel
+                        pendingApplications={pendingApplications}
+                        pendingStudentVerifications={Number(stats.pendingStudentVerifications || 0)}
+                        upcomingDeadlineCount={Number(stats.upcomingDeadlineCount || 0)}
+                        upcomingDeadlines={stats.upcomingDeadlines}
+                        onReviewJobs={() => navigate("/admin/jobs")}
+                        onVerifyStudents={() => navigate("/admin/students/verification")}
+                    />
+
+                    <PlacementAnalytics
+                        totalApplications={totalApplications}
+                        totalJobs={totalJobs}
+                        statusBreakdown={stats.statusBreakdown}
+                        branchBreakdown={stats.branchBreakdown}
+                        salaryStats={stats.salaryStats}
+                        placedSalaryStats={stats.placedSalaryStats}
+                        offeredApplications={offeredApplications}
+                    />
+
+                    <RecentActivity
+                        jobs={stats.recentJobs}
+                        applications={stats.recentApplications}
+                        onManageJobs={() => navigate("/admin/jobs")}
+                        onEditJob={jobId => navigate(`/admin/jobs/${jobId}/edit`)}
+                        onViewApplicants={jobId => navigate(`/admin/jobs/${jobId}/applicants`)}
+                    />
+                </>
+            )}
+        </PageContainer>
+    );
+}
 
 export default AdminDashboard;
