@@ -1,4 +1,4 @@
-function Card({
+﻿function Card({
     children,
     className = ""
 }) {
@@ -7,7 +7,7 @@ function Card({
 
         <div
             className={`
-                rounded-xl
+                portal-card rounded-xl
                 border
                 border-gray-100
                 bg-white

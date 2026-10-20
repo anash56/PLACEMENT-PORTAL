@@ -1,4 +1,4 @@
-function PageContainer({
+﻿function PageContainer({
     children,
     className = ""
 }) {
@@ -8,14 +8,14 @@ function PageContainer({
         <main
             className={`
                 min-h-[calc(100vh-73px)]
-                bg-gray-50
+                bg-gray-50 portal-page
                 px-4
                 py-8
                 ${className}
             `}
         >
 
-            <div className="mx-auto max-w-7xl">
+            <div className="portal-page-content mx-auto max-w-7xl">
 
                 {children}
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { Outlet } from "react-router-dom";
 
 import AdminSidebar from "../components/admin/AdminSidebar";
@@ -26,7 +26,7 @@ function AdminLayout() {
 
     return (
 
-        <div className="flex h-screen overflow-hidden bg-gray-50">
+        <div className="flex h-screen overflow-hidden bg-gray-50 portal-admin-shell">
 
             <AdminSidebar
                 sidebarOpen={sidebarOpen}
@@ -34,12 +34,12 @@ function AdminLayout() {
             />
 
 
-            <div className="flex min-w-0 flex-1 flex-col">
+            <div className="portal-admin-main flex min-w-0 flex-1 flex-col">
 
                 <header
                     className="
                         flex
-                        h-16
+                        h-16 portal-admin-mobile-header
                         shrink-0
                         items-center
                         border-b
@@ -62,7 +62,7 @@ function AdminLayout() {
                             text-sm
                             font-medium
                             text-gray-700
-                            hover:bg-gray-50
+                            hover:bg-gray-50 portal-admin-shell
                         "
                     >
 
@@ -80,7 +80,7 @@ function AdminLayout() {
                 </header>
 
 
-                <main className="min-w-0 flex-1 overflow-y-auto">
+                <main className="portal-admin-scroll min-w-0 flex-1 overflow-y-auto">
 
                     <Outlet />
 

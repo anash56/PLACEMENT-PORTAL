@@ -1,4 +1,4 @@
-function Button({
+﻿function Button({
     children,
     type = "button",
     variant = "primary",
@@ -29,7 +29,7 @@ function Button({
             type={type}
             disabled={disabled}
             onClick={onClick}
-            className={`${baseStyles} ${variants[variant] || variants.primary} ${className}`}
+            className={`portal-button ${baseStyles} ${variants[variant] || variants.primary} ${className}`}
         >
 
             {children}

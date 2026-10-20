@@ -1,0 +1,267 @@
+/* Placement Portal workspace UI polish
+   Loaded after the existing design system; behavior and page data remain unchanged. */
+:root {
+  --portal-border: #e3ebf7;
+  --portal-shadow: 0 8px 28px rgb(16 43 83 / 5%);
+  --portal-shadow-hover: 0 16px 38px rgb(16 43 83 / 9%);
+  --portal-blue: #2368d8;
+  --portal-ink: #102747;
+  --portal-muted: #6d7f98;
+}
+
+.portal-page {
+  position: relative;
+  isolation: isolate;
+  background:
+    radial-gradient(ellipse at 4% 0%, rgb(219 234 254 / 36%), transparent 31%),
+    linear-gradient(180deg, #f8faff 0%, #f4f7fc 100%);
+  color: var(--portal-ink);
+}
+
+.portal-page-content {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+.portal-page h1 {
+  color: var(--portal-ink);
+  font-weight: 800;
+  line-height: 1.12;
+  letter-spacing: -.045em;
+  text-wrap: balance;
+}
+
+.portal-page h1.text-white,
+.portal-page [class*="linear-gradient"] h1,
+.portal-page [class*="linear-gradient"] h2,
+.portal-page [class*="linear-gradient"] h3 {
+  color: #fff;
+}
+
+.portal-page h2 {
+  color: #17345c;
+  font-weight: 750;
+  letter-spacing: -.025em;
+  line-height: 1.28;
+}
+
+.portal-page h3 {
+  color: #294564;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.portal-card {
+  border-color: var(--portal-border);
+  border-radius: 1.2rem;
+  background-color: rgb(255 255 255 / 96%);
+  box-shadow: var(--portal-shadow);
+  transition: box-shadow .2s ease, border-color .2s ease;
+}
+
+.portal-card:hover {
+  border-color: #d4e2f4;
+  box-shadow: var(--portal-shadow-hover);
+}
+
+.portal-page .portal-card p {
+  overflow-wrap: anywhere;
+}
+
+.portal-button {
+  min-height: 40px;
+  font-weight: 700;
+  letter-spacing: -.005em;
+}
+
+.portal-button:focus-visible,
+.portal-admin-sidebar a:focus-visible {
+  outline: 3px solid rgb(71 139 245 / 52%);
+  outline-offset: 3px;
+}
+
+.portal-page input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.portal-page select,
+.portal-page textarea {
+  border-color: #d7e3f2;
+  border-radius: .8rem;
+  background-color: #fff;
+  color: #163150;
+  box-shadow: 0 1px 2px rgb(16 43 83 / 2%);
+}
+
+.portal-page input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus,
+.portal-page select:focus,
+.portal-page textarea:focus {
+  border-color: #78a8ef;
+  box-shadow: 0 0 0 4px rgb(35 104 216 / 11%);
+}
+
+.portal-page input[type="file"] {
+  border: 1px dashed #c7d8ef;
+  border-radius: .9rem;
+  background: #f8fbff;
+  padding: .8rem;
+}
+
+.portal-page table {
+  border-color: var(--portal-border);
+  border-radius: 1rem;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgb(16 43 83 / 2%);
+}
+
+.portal-page thead {
+  background: #f4f8fe;
+}
+
+.portal-page th {
+  color: #637893;
+  font-size: .68rem;
+  font-weight: 800;
+  letter-spacing: .075em;
+}
+
+.portal-page td {
+  color: #344b68;
+}
+
+.portal-page tbody tr:hover td {
+  background-color: #f9fbff;
+}
+
+.portal-page hr {
+  border-color: #e7eef8;
+}
+
+/* Keep admin workspaces structurally distinct from student-facing pages,
+   while retaining the exact same colors, surfaces and typography. */
+.portal-admin-shell {
+  background: #f4f7fc !important;
+}
+
+.portal-admin-main {
+  min-width: 0;
+  min-height: 0;
+  background:
+    radial-gradient(ellipse at 100% 0%, rgb(219 234 254 / 26%), transparent 35%),
+    #f5f8fd;
+}
+
+.portal-admin-scroll {
+  min-width: 0;
+  overscroll-behavior: contain;
+  scrollbar-color: #c9d8ec transparent;
+  scrollbar-width: thin;
+}
+
+.portal-admin-mobile-header {
+  border-color: var(--portal-border) !important;
+  background: rgb(255 255 255 / 96%) !important;
+  box-shadow: 0 2px 12px rgb(16 43 83 / 3%);
+  backdrop-filter: blur(14px);
+}
+
+.portal-admin-sidebar {
+  border-color: var(--portal-border) !important;
+  background: rgb(255 255 255 / 98%) !important;
+  box-shadow: 8px 0 28px rgb(16 43 83 / 3%);
+}
+
+.portal-admin-sidebar nav {
+  display: grid;
+  gap: .4rem;
+}
+
+.portal-admin-sidebar nav a {
+  min-height: 43px;
+  display: flex;
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: .85rem;
+  padding: .7rem .9rem;
+  color: #5b6f89;
+  font-weight: 700;
+  transition: background .18s ease, color .18s ease, border-color .18s ease;
+}
+
+.portal-admin-sidebar nav a:hover:not([aria-current="page"]) {
+  border-color: #e2ebf8;
+  color: #1c4e93;
+  background: #f5f9ff;
+}
+
+.portal-admin-sidebar nav a[aria-current="page"] {
+  border-color: #dce9ff;
+  color: #1e5dbb;
+  background: linear-gradient(110deg, #edf5ff, #f7faff);
+  box-shadow: inset 3px 0 0 #3177dd;
+}
+
+.portal-admin-sidebar nav a[aria-current="page"].bg-blue-600 {
+  color: #1e5dbb !important;
+  background: linear-gradient(110deg, #edf5ff, #f7faff) !important;
+}
+
+/* Search and filtering controls should feel like one tool across job feeds,
+   applications, admin lists and verification queues. */
+.portal-page form {
+  min-width: 0;
+}
+
+.portal-page label {
+  color: #344b68;
+  font-weight: 650;
+}
+
+.portal-page button:not(:disabled) {
+  transition: transform .16s ease, box-shadow .18s ease, background-color .18s ease, border-color .18s ease;
+}
+
+.portal-page button:not(:disabled):active {
+  transform: translateY(1px);
+}
+
+.portal-page button:disabled {
+  cursor: not-allowed;
+  filter: saturate(.75);
+}
+
+/* Scrollable data tables remain usable on small phones. */
+@media (max-width: 700px) {
+  .portal-page-content {
+    max-width: 100%;
+  }
+
+  .portal-page .portal-card {
+    border-radius: 1rem;
+  }
+
+  .portal-page table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .portal-page th,
+  .portal-page td {
+    min-width: 105px;
+    white-space: normal;
+    padding: .72rem .7rem;
+    font-size: .8rem;
+  }
+
+  .portal-admin-sidebar {
+    box-shadow: 18px 0 38px rgb(6 25 57 / 14%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .portal-card,
+  .portal-button,
+  .portal-admin-sidebar nav a {
+    transition: none !important;
+  }
+}
