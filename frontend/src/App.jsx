@@ -23,7 +23,11 @@ const SuperAdminDashboard = lazy(() => import("./pages/SuperAdminDashboard"));
 const AcceptInvitation = lazy(() => import("./pages/AcceptInvitation"));
 const VerificationQueue = lazy(() => import("./pages/VerificationQueue"));
 
-function NormalLayout() { return <><Navbar /><Outlet /></>; }
+function NormalLayout() {
+  const location = useLocation();
+  const isFullScreenAuth = ["/login", "/register"].includes(location.pathname);
+  return <>{!isFullScreenAuth && <Navbar />}<Outlet /></>;
+}
 function LandingRoute() {
   const { isAuthenticated, isStudent, isCollegeAdmin, isSuperAdmin } = useAuth();
   const navigate = useNavigate();
