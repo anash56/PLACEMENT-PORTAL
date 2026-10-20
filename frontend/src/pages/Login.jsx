@@ -16,7 +16,7 @@ export default function Login() {
       if (isForgotView) { const result = await api.post("/auth/forgot-password", { email }); toast.success(result.data.message || "If the account exists, a reset link will be sent."); setIsForgotView(false); setPassword(""); return; }
       await api.post("/auth/login", { email, password });
       const user = await login();
-      if (!user) throw new Error("The server created a session but the current user could not be loaded.");
+      if (!user) throw new Error("Login succeeded, but your account could not be loaded. Check the session cookie and try again.");
       toast.success("Login successful.");
       navigate(user.role === "super_admin" ? "/super-admin" : user.role === "college_admin" ? "/admin" : "/jobs", { replace: true });
     } catch (error) { toast.error(error.response?.data?.message || error.message || "Login failed."); }

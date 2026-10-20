@@ -50,6 +50,7 @@ export default function App() {
       <Route path="/reset-password/:token" element={<ResetPassword />} />
       <Route path="/my-applications" element={<ProtectedRoute><MyApplications /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+      <Route path="/super-admin" element={<RoleRoute roles={["super_admin"]}><SuperAdminDashboard /></RoleRoute>} />
     </Route>
     <Route path="/admin" element={<RoleRoute roles={["college_admin"]}><AdminLayout /></RoleRoute>}>
       <Route index element={<AdminDashboard />} />
@@ -59,6 +60,6 @@ export default function App() {
       <Route path="jobs/:jobId/applicants" element={<Applicants />} />
       <Route path="students/verification" element={<VerificationQueue />} />
     </Route>
-    <Route path="/super-admin" element={<RoleRoute roles={["super_admin"]}><SuperAdminDashboard /></RoleRoute>} />
+
   </Routes></Suspense></BrowserRouter>;
 }

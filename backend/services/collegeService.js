@@ -50,19 +50,30 @@ const createInvitation = async (college, creatorId) => {
     if (college.admin) {
         const activeAdmin = await User.findOne({ _id: college.admin, role: "college_admin", isSuspended: false }).lean();
         if (activeAdmin) throw fail("This college already has an active College Admin.", 409);
-        // Repair stale references left by deleted/disabled test accounts.
+
+        // Repair an obsolete assignment only if it has not changed concurrently.
+        const staleAdminId = college.admin;
+        const clearedCollege = await College.findOneAndUpdate(
+            { _id: college._id, status: "approved", admin: staleAdminId },
+            { $set: { admin: null } },
+            { new: true }
+        );
+        if (!clearedCollege) throw fail("The college administrator assignment changed. Refresh and try again.", 409);
         college.admin = null;
-        await college.save();
     }
-    const existingAdmin = await User.findOne({ email: college.contactEmail }).lean();
-    if (existingAdmin) throw fail("This email already belongs to an administrator account.", 409);
-    await Invitation.updateMany({ college: college._id, usedAt: null }, { $set: { usedAt: new Date() } });
+
+    const existingAccount = await User.findOne({ email: college.contactEmail }).select("_id role").lean();
+    if (existingAccount) {
+        throw fail("The college contact email already belongs to an account. Use a separate official email for the College Admin account.", 409);
+    }
+
     const rawToken = crypto.randomBytes(32).toString("base64url");
     const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
-    await Invitation.create({ college: college._id, email: college.contactEmail, tokenHash, expiresAt, createdBy: creatorId });
+    const invitation = await Invitation.create({ college: college._id, email: college.contactEmail, tokenHash, expiresAt, createdBy: creatorId });
     const frontendUrl = (process.env.FRONTEND_URL || "http://localhost:5173").replace(/\/$/, "");
     const setupUrl = `${frontendUrl}/accept-invitation?token=${encodeURIComponent(rawToken)}`;
+
     let emailResult;
     try {
         emailResult = await sendEmail({
@@ -71,13 +82,26 @@ const createInvitation = async (college, creatorId) => {
             html: `<p>You have been invited to administer <strong>${esc(college.name)}</strong> on Placement Portal.</p><p><a href="${esc(setupUrl)}">Set up your College Admin account</a></p><p>This link expires in 24 hours and can only be used once.</p>`
         });
     } catch (error) {
-        throw Object.assign(fail(error.message, 502), { invitationCreated: true });
+        // Do not invalidate previously delivered links if this delivery attempt fails.
+        await Invitation.updateOne({ _id: invitation._id, usedAt: null }, { $set: { usedAt: new Date() } }).catch(() => {});
+        throw Object.assign(fail("The invitation email could not be delivered. Check the email configuration and try again.", 502), { invitationCreated: false });
     }
+
+    // Only retire previous links after the replacement link has been delivered or surfaced locally in development.
+    await Invitation.updateMany(
+        { college: college._id, _id: { $ne: invitation._id }, usedAt: null },
+        { $set: { usedAt: new Date() } }
+    );
+
     return {
-        email: college.contactEmail, expiresAt,
-        ...(emailResult.sent ? { delivered: true } : { delivered: false, ...(process.env.NODE_ENV !== "production" ? { developmentSetupUrl: setupUrl } : {}) })
+        email: college.contactEmail,
+        expiresAt,
+        ...(emailResult.sent
+            ? { delivered: true }
+            : { delivered: false, ...(process.env.NODE_ENV !== "production" ? { developmentSetupUrl: setupUrl } : {}) })
     };
 };
+
 
 export const reviewCollege = async (collegeId, action, reason, actorId) => {
     if (!mongoose.isValidObjectId(collegeId)) throw fail("Invalid college ID.");
@@ -130,38 +154,106 @@ export const inviteCollegeAdmin = async (collegeId, actorId) => {
     return createInvitation(college, actorId);
 };
 
-export const acceptInvitation = async ({ token, name, password }) => {
-    if (!token || token.length < 30) throw fail("Invalid or expired invitation.", 400);
-    if (!name || String(name).trim().length < 2) throw fail("Enter your full name.");
-    if (!password || password.length < 8 || !/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/\d/.test(password) || !/[^A-Za-z0-9]/.test(password)) throw fail("Password must be at least 8 characters and contain uppercase, lowercase, number, and special character.");
-    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
-    // Atomically consume the invitation so simultaneous submissions cannot create two admins from one link.
-    const invitation = await Invitation.findOneAndUpdate(
-        { tokenHash, usedAt: null, expiresAt: { $gt: new Date() } },
-        { $set: { usedAt: new Date() } },
-        { new: true }
-    ).select("+tokenHash");
+export const acceptInvitation = async ({ token, name, password } = {}) => {
+    const cleanToken = typeof token === "string" ? token.trim() : "";
+    const cleanName = typeof name === "string" ? name.trim() : "";
+    if (cleanToken.length < 30) throw fail("Invalid or expired invitation.", 400);
+    if (cleanName.length < 2) throw fail("Enter your full name.");
+    if (typeof password !== "string" || password.length < 8 || !/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/\d/.test(password) || !/[^A-Za-z0-9]/.test(password)) {
+        throw fail("Password must be at least 8 characters and contain uppercase, lowercase, number, and special character.");
+    }
+
+    const tokenHash = crypto.createHash("sha256").update(cleanToken).digest("hex");
+    const invitation = await Invitation.findOne({
+        tokenHash,
+        usedAt: null,
+        expiresAt: { $gt: new Date() }
+    }).select("+tokenHash");
     if (!invitation) throw fail("This invitation is invalid, expired, or already used.", 400);
+
+    // Run checks that can fail normally BEFORE consuming the one-time token.
     const college = await College.findById(invitation.college);
     if (!college || college.status !== "approved") throw fail("This college is not currently approved.", 409);
+    if (await User.exists({ email: invitation.email })) {
+        throw fail("This email already belongs to an account. College Admin accounts need a separate email; existing accounts are not automatically promoted.", 409);
+    }
+
+    let staleAdminId = null;
     if (college.admin) {
-        const currentAdmin = await User.findOne({ _id: college.admin, role: "college_admin", isSuspended: false }).lean();
+        const currentAdmin = await User.findOne({
+            _id: college.admin,
+            role: "college_admin",
+            isSuspended: false
+        }).lean();
         if (currentAdmin) throw fail("This college already has an administrator assigned.", 409);
-        college.admin = null;
+        staleAdminId = college.admin;
     }
-    if (await User.findOne({ email: invitation.email })) throw fail("An account with this email already exists. Contact the platform administrator.", 409);
-    const bcrypt = (await import("bcryptjs")).default;
-    const user = await User.create({ name: String(name).trim(), email: invitation.email, password: await bcrypt.hash(password, 10), role: "college_admin", college: college._id, verificationStatus: "verified" });
-    const assignedCollege = await College.findOneAndUpdate(
-        { _id: college._id, status: "approved", admin: null },
-        { $set: { admin: user._id } },
+
+    // Atomically claim the invitation so concurrent submissions cannot create duplicate accounts.
+    const claimedAt = new Date();
+    const claimed = await Invitation.findOneAndUpdate(
+        { _id: invitation._id, usedAt: null, expiresAt: { $gt: claimedAt } },
+        { $set: { usedAt: claimedAt } },
         { new: true }
-    );
-    if (!assignedCollege) {
-        await User.deleteOne({ _id: user._id });
-        throw fail("A College Admin was assigned concurrently. Please request a new invitation if needed.", 409);
+    ).select("+tokenHash");
+    if (!claimed) throw fail("This invitation has already been used or has expired.", 409);
+
+    const bcrypt = (await import("bcryptjs")).default;
+    let createdUser = null;
+    try {
+        if (staleAdminId) {
+            const clearedCollege = await College.findOneAndUpdate(
+                { _id: college._id, status: "approved", admin: staleAdminId },
+                { $set: { admin: null } },
+                { new: true }
+            );
+            if (!clearedCollege) throw fail("The college administrator assignment changed. Request a fresh invitation if needed.", 409);
+        }
+
+        createdUser = await User.create({
+            name: cleanName,
+            email: claimed.email,
+            password: await bcrypt.hash(password, 10),
+            role: "college_admin",
+            college: college._id,
+            verificationStatus: "verified"
+        });
+
+        const assignedCollege = await College.findOneAndUpdate(
+            { _id: college._id, status: "approved", admin: null },
+            { $set: { admin: createdUser._id } },
+            { new: true }
+        );
+        if (!assignedCollege) throw fail("A College Admin was assigned concurrently. Request a fresh invitation if needed.", 409);
+
+        return {
+            id: String(createdUser._id),
+            name: createdUser.name,
+            email: createdUser.email,
+            role: createdUser.role,
+            college: String(college._id),
+            collegeName: college.name
+        };
+    } catch (error) {
+        // Roll back partial account creation. Only restore the token if the college is still eligible.
+        if (createdUser) await User.deleteOne({ _id: createdUser._id }).catch(() => {});
+        try {
+            const [freshCollege, emailOccupied] = await Promise.all([
+                College.findById(college._id).select("status admin").lean(),
+                User.exists({ email: claimed.email })
+            ]);
+            if (freshCollege?.status === "approved" && !freshCollege.admin && !emailOccupied) {
+                await Invitation.updateOne(
+                    { _id: claimed._id, usedAt: claimedAt },
+                    { $set: { usedAt: null } }
+                );
+            }
+        } catch {
+            // Preserve the original failure; rollback is best-effort if the database is unavailable.
+        }
+        throw error;
     }
-    return { id: String(user._id), name: user.name, email: user.email, role: user.role, college: String(college._id), collegeName: college.name };
 };
+
 
 export const invitationEmailConfigured = isEmailConfigured;
