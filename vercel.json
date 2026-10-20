@@ -1,8 +1,12 @@
 {
   "rewrites": [
     {
+      "source": "/api/:path*",
+      "destination": "https://placement-portal-backend-nj33.onrender.com/api/:path*"
+    },
+    {
       "source": "/((?!api/|uploads/).*)",
-      "destination": "/frontend/index.html"
+      "destination": "/index.html"
     }
   ]
 }
