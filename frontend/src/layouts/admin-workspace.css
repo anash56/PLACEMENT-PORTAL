@@ -1,0 +1,148 @@
+/* Admin-only refinements. The shared portal-card, portal-page and form rules
+   remain the source of truth; this file aligns all college-admin routes. */
+
+.portal-admin-scroll {
+    background: #f5f8fd;
+    color: #102747;
+}
+
+.portal-admin-scroll .portal-page .portal-page-content > header:first-child {
+    border: 1px solid var(--portal-border, #e3ebf7) !important;
+    border-radius: 1.25rem !important;
+    background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%) !important;
+    color: #102747 !important;
+    box-shadow: var(--portal-shadow, 0 8px 28px rgb(16 43 83 / 5%)) !important;
+}
+
+/* Explicitly beat utility classes so the title never goes dark-on-dark or
+   inherits a low-contrast blue intended for a dark gradient. */
+.portal-admin-scroll .portal-page .portal-page-content > header:first-child h1 {
+    color: #102747 !important;
+}
+
+.portal-admin-scroll .portal-page .portal-page-content > header:first-child > p:first-child {
+    color: #657b98 !important;
+}
+
+.portal-admin-scroll .portal-page .portal-page-content > header:first-child p {
+    color: #5e728c !important;
+}
+
+.portal-admin-scroll .portal-page .portal-page-content > header:first-child > div:first-of-type {
+    border-color: #dce6f3 !important;
+    box-shadow: none !important;
+}
+
+.portal-admin-scroll .portal-page .portal-page-content > header:first-child .inline-flex {
+    border-color: #dce6f3 !important;
+    background: #f5f8fc !important;
+    color: #526982 !important;
+}
+
+.portal-admin-scroll .portal-page .portal-page-content > header:first-child .portal-button {
+    min-height: 42px;
+    border: 1px solid #d7e3f2 !important;
+    border-radius: .75rem !important;
+    background: #ffffff !important;
+    color: #294565 !important;
+    box-shadow: 0 2px 8px rgb(16 43 83 / 4%) !important;
+}
+
+.portal-admin-scroll .portal-page .portal-page-content > header:first-child .portal-button:hover:not(:disabled) {
+    border-color: #bdcfe5 !important;
+    background: #f6f9fd !important;
+}
+
+.portal-admin-scroll .portal-page .portal-page-content > header:first-child .portal-button:first-child {
+    border-color: #245e9b !important;
+    background: #245e9b !important;
+    color: #ffffff !important;
+}
+
+.portal-admin-scroll .portal-page .portal-page-content > header:first-child .portal-button:first-child:hover:not(:disabled) {
+    border-color: #1d4d82 !important;
+    background: #1d4d82 !important;
+}
+
+/* Keep all page titles and descriptions aligned across Dashboard, Manage Jobs,
+   Create Job and Student Verification. */
+.portal-admin-scroll .portal-page .portal-page-content h1 {
+    color: #102747;
+    font-size: clamp(1.65rem, 2.6vw, 2rem);
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: -.04em;
+}
+
+.portal-admin-scroll .portal-page .portal-page-content h2 {
+    color: #17345c;
+    font-weight: 750;
+    letter-spacing: -.025em;
+}
+
+.portal-admin-scroll .portal-page .portal-card {
+    border-color: #e3ebf7;
+    background: #ffffff;
+    box-shadow: 0 8px 28px rgb(16 43 83 / 5%);
+}
+
+.portal-admin-scroll .portal-page .portal-card:hover {
+    border-color: #d4e2f4;
+    box-shadow: 0 12px 30px rgb(16 43 83 / 7%);
+}
+
+.portal-admin-scroll .portal-page input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.portal-admin-scroll .portal-page select,
+.portal-admin-scroll .portal-page textarea {
+    border-color: #d7e3f2;
+    border-radius: .75rem;
+    background: #ffffff;
+    color: #163150;
+}
+
+.portal-admin-scroll .portal-page input:focus,
+.portal-admin-scroll .portal-page select:focus,
+.portal-admin-scroll .portal-page textarea:focus {
+    border-color: #7d9fc9;
+    box-shadow: 0 0 0 3px rgb(36 94 155 / 12%);
+}
+
+.portal-admin-scroll .portal-page .portal-button {
+    border-radius: .75rem;
+}
+
+.portal-admin-scroll .portal-page .portal-button {
+    letter-spacing: 0;
+}
+
+.portal-admin-scroll .portal-page table thead {
+    background: #f4f8fe;
+}
+
+.portal-admin-scroll .portal-page table th {
+    color: #637893;
+}
+
+.portal-admin-scroll .portal-page table td {
+    color: #344b68;
+}
+
+@media (max-width: 640px) {
+    .portal-admin-scroll .portal-page {
+        padding-inline: 1rem;
+        padding-top: 1.5rem;
+    }
+
+    .portal-admin-scroll .portal-page .portal-page-content > header:first-child {
+        padding: 1.25rem !important;
+        border-radius: 1rem !important;
+    }
+
+    .portal-admin-scroll .portal-page .portal-page-content > header:first-child > div:nth-of-type(2) {
+        width: 100%;
+    }
+
+    .portal-admin-scroll .portal-page .portal-page-content > header:first-child .portal-button {
+        flex: 1 1 auto;
+    }
+}

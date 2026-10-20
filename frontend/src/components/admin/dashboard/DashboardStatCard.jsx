@@ -1,7 +1,7 @@
 import Card from "../../ui/Card";
 
 export default function DashboardStatCard({ label, value, description, tone = "blue", actionLabel, onAction }) {
-    const accent = tone === "success" ? "border-t-emerald-500" : "border-t-blue-500";
+    const accent = tone === "success" ? "border-t-emerald-500" : "border-t-[#7893b2]";
 
     return (
         <Card className={`h-full !rounded-2xl !border-slate-200/90 !border-t-[3px] !p-5 !shadow-sm ${accent}`}>

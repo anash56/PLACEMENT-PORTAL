@@ -23,7 +23,7 @@ function RecruitmentPipeline({ totalApplications, statusBreakdown }) {
                         const percentage = totalApplications > 0
                             ? Math.min(100, (count / totalApplications) * 100)
                             : 0;
-                        const barColor = STATUS_COLORS[status] || "bg-blue-500";
+                        const barColor = STATUS_COLORS[status] || "bg-[#7893b2]";
 
                         return (
                             <div key={status}>
@@ -69,7 +69,7 @@ function BranchDistribution({ branches }) {
                     {orderedBranches.map(branch => (
                         <div key={branch.name} className="flex items-center justify-between gap-3 text-sm">
                             <span className="min-w-0 truncate font-medium text-slate-600">{branch.name}</span>
-                            <span className="shrink-0 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-800">
+                            <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-700">
                                 {Number(branch.value || 0).toLocaleString("en-IN")} student{Number(branch.value) === 1 ? "" : "s"}
                             </span>
                         </div>

@@ -17,7 +17,7 @@ function AttentionCard({ title, description, count, countLabel, buttonLabel, onC
         ? "bg-amber-50 text-amber-800"
         : tone === "green"
             ? "bg-emerald-50 text-emerald-800"
-            : "bg-blue-50 text-blue-800";
+            : "bg-slate-100 text-slate-700";
 
     return (
         <Card className="flex h-full flex-col !rounded-2xl !p-5">

@@ -9,8 +9,8 @@ const formatDate = value => {
 
 const STATUS_CLASS = {
     Pending: "bg-amber-50 text-amber-800",
-    "Test Scheduled": "bg-blue-50 text-blue-800",
-    "Interview Scheduled": "bg-indigo-50 text-indigo-800",
+    "Test Scheduled": "bg-slate-100 text-slate-700",
+    "Interview Scheduled": "bg-sky-50 text-sky-800",
     Shortlisted: "bg-emerald-50 text-emerald-800",
     Offered: "bg-green-50 text-green-800",
     Rejected: "bg-rose-50 text-rose-800",
