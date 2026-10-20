@@ -14,9 +14,72 @@ createRoot(document.getElementById("root")).render(
       <Toaster
         position="top-right"
         reverseOrder={false}
+        gutter={10}
+        containerStyle={{ top: 16, right: 16 }}
         toastOptions={{
           duration: 3200,
-          style: { borderRadius: "12px", background: "#102747", color: "#fff", boxShadow: "0 12px 30px rgb(3 20 46 / 22%)" },
+          style: {
+            borderRadius: "14px",
+            background: "#ffffff",
+            color: "#102747",
+            border: "1px solid #dbe6f4",
+            boxShadow: "0 12px 30px rgb(3 20 46 / 14%)",
+            padding: "12px 14px",
+            fontSize: "14px",
+            fontWeight: 600,
+            lineHeight: 1.45,
+            maxWidth: "min(420px, calc(100vw - 32px))",
+          },
+          success: {
+            duration: 3200,
+            style: {
+              borderRadius: "14px",
+              background: "#ffffff",
+              color: "#102747",
+              border: "1px solid #dbe6f4",
+              borderLeft: "4px solid #16a34a",
+              boxShadow: "0 12px 30px rgb(3 20 46 / 14%)",
+              padding: "12px 14px",
+              fontSize: "14px",
+              fontWeight: 600,
+              lineHeight: 1.45,
+              maxWidth: "min(420px, calc(100vw - 32px))",
+            },
+            iconTheme: { primary: "#15803d", secondary: "#dcfce7" },
+          },
+          error: {
+            duration: 2000,
+            style: {
+              borderRadius: "14px",
+              background: "#ffffff",
+              color: "#102747",
+              border: "1px solid #dbe6f4",
+              borderLeft: "4px solid #dc2626",
+              boxShadow: "0 12px 30px rgb(3 20 46 / 14%)",
+              padding: "12px 14px",
+              fontSize: "14px",
+              fontWeight: 600,
+              lineHeight: 1.45,
+              maxWidth: "min(420px, calc(100vw - 32px))",
+            },
+            iconTheme: { primary: "#b91c1c", secondary: "#fee2e2" },
+          },
+          loading: {
+            style: {
+              borderRadius: "14px",
+              background: "#ffffff",
+              color: "#102747",
+              border: "1px solid #dbe6f4",
+              borderLeft: "4px solid #2563eb",
+              boxShadow: "0 12px 30px rgb(3 20 46 / 14%)",
+              padding: "12px 14px",
+              fontSize: "14px",
+              fontWeight: 600,
+              lineHeight: 1.45,
+              maxWidth: "min(420px, calc(100vw - 32px))",
+            },
+            iconTheme: { primary: "#2563eb", secondary: "#dbeafe" },
+          },
         }}
       />
     </AuthProvider>
