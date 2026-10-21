@@ -11,6 +11,7 @@ const Login = lazy(() => import("./pages/Login"));
 const Register = lazy(() => import("./pages/Register"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const Jobs = lazy(() => import("./pages/Jobs"));
+const JobDetails = lazy(() => import("./pages/JobDetails"));
 const MyApplications = lazy(() => import("./pages/MyApplications"));
 const Profile = lazy(() => import("./pages/Profile"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
@@ -28,6 +29,7 @@ function NormalLayout() {
   const isFullScreenAuth = ["/login", "/register"].includes(location.pathname);
   return <>{!isFullScreenAuth && <Navbar />}<Outlet /></>;
 }
+
 function LandingRoute() {
   const { isAuthenticated, isStudent, isCollegeAdmin, isSuperAdmin } = useAuth();
   const navigate = useNavigate();
@@ -36,13 +38,17 @@ function LandingRoute() {
   }, [isAuthenticated, isStudent, isCollegeAdmin, isSuperAdmin, navigate]);
   return isAuthenticated ? <div className="flex min-h-[60vh] items-center justify-center text-sm text-slate-500">Opening your workspace…</div> : <LandingPage />;
 }
-function LoadingFallback() { return <div className="flex h-screen w-screen items-center justify-center bg-gray-50"><div className="flex flex-col items-center gap-4"><div className="h-12 w-12 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600" /><p className="text-sm font-medium text-gray-500">Preparing your experience…</p></div></div>; }
+
+function LoadingFallback() {
+  return <div className="flex h-screen w-screen items-center justify-center bg-gray-50"><div className="flex flex-col items-center gap-4"><div className="h-12 w-12 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600"/><p className="text-sm font-medium text-gray-500">Preparing your experience…</p></div></div>;
+}
 
 export default function App() {
   return <BrowserRouter><Suspense fallback={<LoadingFallback />}><Routes>
     <Route element={<NormalLayout />}>
       <Route path="/" element={<LandingRoute />} />
       <Route path="/jobs" element={<Jobs />} />
+      <Route path="/jobs/:jobId" element={<JobDetails />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/college-onboarding" element={<CollegeOnboarding />} />
@@ -60,6 +66,5 @@ export default function App() {
       <Route path="jobs/:jobId/applicants" element={<Applicants />} />
       <Route path="students/verification" element={<VerificationQueue />} />
     </Route>
-
   </Routes></Suspense></BrowserRouter>;
 }

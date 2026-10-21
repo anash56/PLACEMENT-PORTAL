@@ -1,0 +1,74 @@
+/* Shared finishing rules for the student profile and job discovery/details pages. */
+html,
+body,
+#root {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+html,
+body {
+  overflow-x: clip;
+}
+
+.portal-page {
+  width: 100%;
+  max-width: 100%;
+}
+
+.portal-page-content {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.portal-profile-layout,
+.portal-profile-layout > *,
+.portal-profile-layout .portal-card,
+.portal-profile-layout form,
+.portal-profile-layout fieldset,
+.portal-profile-layout label,
+.portal-profile-layout input,
+.portal-profile-layout select,
+.portal-profile-layout textarea {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.portal-profile-edit-card {
+  overflow-wrap: anywhere;
+}
+
+.portal-profile-resume-label > span:first-child {
+  flex: 1 1 auto;
+  overflow-wrap: anywhere;
+}
+
+.portal-job-card {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.portal-job-card h2,
+.portal-job-card p,
+.portal-job-card span {
+  overflow-wrap: anywhere;
+}
+
+.portal-job-detail-copy {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+  .portal-profile-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .portal-profile-layout > * {
+    grid-column: auto !important;
+  }
+}
