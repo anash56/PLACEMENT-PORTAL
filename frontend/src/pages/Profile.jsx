@@ -1,26 +1,224 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import api from "../services/api";
 import PageContainer from "../components/ui/PageContainer";
 import Card from "../components/ui/Card";
-import Input from "../components/ui/Input";
 import Button from "../components/ui/Button";
+import ProfileSummaryCard from "../components/student/profile/ProfileSummaryCard";
+import ProfileEditForm from "../components/student/profile/ProfileEditForm";
+import CollegeVerificationCard from "../components/student/profile/CollegeVerificationCard";
+import { isAllowedProfileFile, readFileAsDataUri } from "../utils/profileFiles";
 
-const toBase64 = file => new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = reject; reader.readAsDataURL(file); });
+const EMPTY_PROFILE = {
+    name: "",
+    email: "",
+    cgpa: "",
+    branch: "",
+    graduationYear: "",
+    skillsText: "",
+    contactNumber: "",
+    resumeUrl: "",
+    isProfileCompleted: false,
+    collegeName: "Not selected",
+    verificationStatus: "pending",
+    verificationRejectionReason: "",
+};
+
+function mapUserToProfile(user) {
+    return {
+        ...EMPTY_PROFILE,
+        name: user.name || "",
+        email: user.email || "",
+        cgpa: user.cgpa ?? "",
+        branch: user.branch || "",
+        graduationYear: user.graduationYear ?? "",
+        skillsText: (user.skills || []).join(", "),
+        contactNumber: user.contactNumber || "",
+        resumeUrl: user.resumeUrl || "",
+        isProfileCompleted: Boolean(user.isProfileCompleted),
+        collegeName: user.collegeName || user.college?.name || "Not selected",
+        verificationStatus: user.verificationStatus || "pending",
+        verificationRejectionReason: user.verificationRejectionReason || "",
+    };
+}
+
 export default function Profile() {
-    const [loading, setLoading] = useState(true); const [saving, setSaving] = useState(false); const [resubmitting, setResubmitting] = useState(false);
-    const [profile, setProfile] = useState({ name: "", email: "", cgpa: "", branch: "", graduationYear: "", skillsText: "", contactNumber: "", resumeUrl: "", isProfileCompleted: false, collegeName: "", verificationStatus: "pending", verificationRejectionReason: "" });
-    const [resumeBase64, setResumeBase64] = useState(""); const [resumeName, setResumeName] = useState(""); const [idCardBase64, setIdCardBase64] = useState(""); const [idCardName, setIdCardName] = useState("");
-    useEffect(() => { (async () => { try { const { data: user } = await api.get("/auth/me"); setProfile({ name: user.name || "", email: user.email || "", cgpa: user.cgpa ?? "", branch: user.branch || "", graduationYear: user.graduationYear ?? "", skillsText: (user.skills || []).join(", "), contactNumber: user.contactNumber || "", resumeUrl: user.resumeUrl || "", isProfileCompleted: Boolean(user.isProfileCompleted), collegeName: user.collegeName || user.college?.name || "Not selected", verificationStatus: user.verificationStatus || "pending", verificationRejectionReason: user.verificationRejectionReason || "" }); } catch (e) { toast.error(e.response?.data?.message || "Failed to load profile."); } finally { setLoading(false); } })(); }, []);
-    const set = event => setProfile(p => ({ ...p, [event.target.name]: event.target.value }));
-    const pickFile = async (event, kind) => { const file = event.target.files?.[0]; if (!file) return; const valid = kind === "resume" ? file.type === "application/pdf" : ["image/jpeg", "image/png", "application/pdf"].includes(file.type); if (!valid || file.size > 5 * 1024 * 1024) { toast.error(kind === "resume" ? "Choose a PDF up to 5 MB." : "Choose a JPG, PNG, or PDF up to 5 MB."); event.target.value = ""; return; } try { const data = await toBase64(file); if (kind === "resume") { setResumeBase64(data); setResumeName(file.name); } else { setIdCardBase64(data); setIdCardName(file.name); } } catch { toast.error("Could not read file."); } };
-    const save = async event => { event.preventDefault(); try { setSaving(true); const payload = { name: profile.name, cgpa: profile.cgpa === "" ? null : Number(profile.cgpa), branch: profile.branch, graduationYear: profile.graduationYear === "" ? null : Number(profile.graduationYear), skills: profile.skillsText.split(",").map(x => x.trim()).filter(Boolean), contactNumber: profile.contactNumber }; if (resumeBase64) { payload.resumeBase64 = resumeBase64; payload.resumeName = resumeName; } const { data } = await api.put("/auth/profile", payload); const u = data.user; setProfile(p => ({ ...p, resumeUrl: u.resumeUrl || p.resumeUrl, isProfileCompleted: Boolean(u.isProfileCompleted) })); setResumeBase64(""); setResumeName(""); toast.success("Profile updated."); } catch (e) { toast.error(e.response?.data?.message || "Profile update failed."); } finally { setSaving(false); } };
-    const resubmit = async event => { event.preventDefault(); if (!idCardBase64) return toast.error("Select a new ID card first."); try { setResubmitting(true); await api.post("/verification/resubmit", { collegeIdCardBase64: idCardBase64 }); setProfile(p => ({ ...p, verificationStatus: "pending", verificationRejectionReason: "" })); setIdCardBase64(""); setIdCardName(""); toast.success("ID card resubmitted. Verification is pending."); } catch (e) { toast.error(e.response?.data?.message || "ID card resubmission failed."); } finally { setResubmitting(false); } };
-    if (loading) return <PageContainer><Card>Loading profile…</Card></PageContainer>;
-    return <PageContainer><div className="mb-6"><h1 className="text-3xl font-bold text-gray-900">Student Profile</h1><p className="mt-2 text-sm text-gray-500">Your academic information and college verification status.</p></div>
-        <div className="grid gap-5 lg:grid-cols-[1fr_2fr]"><div className="space-y-5"><Card><div className="text-center"><div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-blue-100 text-2xl font-bold text-blue-600">{profile.name.charAt(0).toUpperCase() || "S"}</div><h2 className="mt-3 text-xl font-semibold">{profile.name}</h2><p className="text-sm text-gray-500">{profile.email}</p><p className="mt-3 text-sm text-gray-700"><strong>College:</strong> {profile.collegeName}</p><span className={`mt-3 inline-flex rounded-full px-3 py-1 text-xs font-semibold ${profile.verificationStatus === "verified" ? "bg-green-100 text-green-800" : profile.verificationStatus === "rejected" ? "bg-red-100 text-red-800" : "bg-yellow-100 text-yellow-800"}`}>{profile.verificationStatus}</span>{profile.verificationRejectionReason && <p className="mt-2 text-left text-sm text-red-600">Reason: {profile.verificationRejectionReason}</p>}</div></Card><Card><h2 className="font-semibold">Resume status</h2>{profile.resumeUrl ? <a className="mt-2 inline-block text-sm text-blue-600 underline" href={profile.resumeUrl} target="_blank" rel="noreferrer">View uploaded resume</a> : <p className="mt-2 text-sm text-gray-500">No resume uploaded yet.</p>}<p className="mt-3 text-xs text-gray-500">Profile completion: {profile.isProfileCompleted ? "Complete" : "Incomplete"}</p></Card></div>
-            <div className="space-y-5"><Card><h2 className="mb-5 border-b border-gray-100 pb-3 text-lg font-bold">Edit profile</h2><form onSubmit={save} className="space-y-4"><div className="grid gap-4 sm:grid-cols-2"><Input label="Full name" name="name" value={profile.name} onChange={set} required /><Input label="Email" value={profile.email} disabled className="bg-gray-50" /></div><div className="grid gap-4 sm:grid-cols-2"><Input label="CGPA (0–10)" name="cgpa" type="number" min="0" max="10" step="0.01" value={profile.cgpa} onChange={set} /><Input label="Branch / Department" name="branch" value={profile.branch} onChange={set} /></div><div className="grid gap-4 sm:grid-cols-2"><Input label="Graduation year" name="graduationYear" type="number" min="1900" max="2100" value={profile.graduationYear} onChange={set} /><Input label="Contact number" name="contactNumber" type="tel" value={profile.contactNumber} onChange={set} /></div><Input label="Skills (comma separated)" name="skillsText" value={profile.skillsText} onChange={set} placeholder="React, Node.js, Java" /><div><label className="mb-2 block text-sm font-medium text-gray-700">Upload resume (PDF, max 5 MB)</label><input type="file" accept="application/pdf,.pdf" onChange={e => pickFile(e, "resume")} className="block w-full text-sm" />{resumeName && <p className="mt-1 text-xs text-gray-500">Selected: {resumeName}</p>}</div><div className="flex justify-end"><Button disabled={saving}>{saving ? "Saving…" : "Save profile"}</Button></div></form></Card>
-                {profile.verificationStatus !== "verified" && <Card><h2 className="text-lg font-bold">College ID verification</h2><p className="mt-1 text-sm text-gray-500">A College Admin must verify your affiliation before you can apply to jobs.</p><form onSubmit={resubmit} className="mt-4 space-y-3"><label className="block text-sm font-medium text-gray-700">{profile.verificationStatus === "rejected" ? "Upload corrected ID card" : "Replace submitted ID card"}</label><input type="file" accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf" onChange={e => pickFile(e, "id")} className="block w-full text-sm" />{idCardName && <p className="text-xs text-gray-500">Selected: {idCardName}</p>}<Button type="submit" variant="secondary" disabled={resubmitting || !idCardBase64}>{resubmitting ? "Submitting…" : "Resubmit ID card"}</Button></form></Card>}
-            </div></div>
-    </PageContainer>;
+    const [profile, setProfile] = useState(EMPTY_PROFILE);
+    const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState("");
+    const [saving, setSaving] = useState(false);
+    const [resubmitting, setResubmitting] = useState(false);
+    const [resumeBase64, setResumeBase64] = useState("");
+    const [resumeName, setResumeName] = useState("");
+    const [idCardBase64, setIdCardBase64] = useState("");
+    const [idCardName, setIdCardName] = useState("");
+
+    const loadProfile = useCallback(async () => {
+        try {
+            setLoading(true);
+            setLoadError("");
+            const { data } = await api.get("/auth/me");
+            setProfile(mapUserToProfile(data));
+        } catch (requestError) {
+            setLoadError(
+                requestError.response?.data?.message ||
+                "We couldn't load your profile. Please try again.",
+            );
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        loadProfile();
+    }, [loadProfile]);
+
+    const setField = event => {
+        const { name, value } = event.target;
+        setProfile(previous => ({ ...previous, [name]: value }));
+    };
+
+    const pickFile = async (event, kind) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        if (!isAllowedProfileFile(file, kind)) {
+            toast.error(kind === "resume"
+                ? "Choose a PDF resume up to 5 MB."
+                : "Choose a JPG, PNG, or PDF ID card up to 5 MB.");
+            event.target.value = "";
+            return;
+        }
+        try {
+            const dataUri = await readFileAsDataUri(file);
+            if (kind === "resume") {
+                setResumeBase64(dataUri);
+                setResumeName(file.name);
+            } else {
+                setIdCardBase64(dataUri);
+                setIdCardName(file.name);
+            }
+        } catch {
+            toast.error("We couldn't read that file. Please choose it again.");
+            event.target.value = "";
+        }
+    };
+
+    const saveProfile = async event => {
+        event.preventDefault();
+        const cgpa = profile.cgpa === "" ? null : Number(profile.cgpa);
+        const graduationYear = profile.graduationYear === "" ? null : Number(profile.graduationYear);
+        if (cgpa !== null && (!Number.isFinite(cgpa) || cgpa < 0 || cgpa > 10)) {
+            toast.error("CGPA must be between 0 and 10.");
+            return;
+        }
+        if (graduationYear !== null && (!Number.isInteger(graduationYear) || graduationYear < 1900 || graduationYear > 2100)) {
+            toast.error("Enter a valid graduation year.");
+            return;
+        }
+
+        try {
+            setSaving(true);
+            const payload = {
+                name: profile.name.trim(),
+                cgpa,
+                branch: profile.branch.trim(),
+                graduationYear,
+                skills: profile.skillsText.split(",").map(skill => skill.trim()).filter(Boolean),
+                contactNumber: profile.contactNumber.trim(),
+            };
+            if (resumeBase64) {
+                payload.resumeBase64 = resumeBase64;
+                payload.resumeName = resumeName;
+            }
+            const { data } = await api.put("/auth/profile", payload);
+            const updatedUser = data.user || {};
+            setProfile(previous => ({
+                ...previous,
+                ...mapUserToProfile({ ...previous, ...updatedUser, email: previous.email, collegeName: previous.collegeName }),
+            }));
+            setResumeBase64("");
+            setResumeName("");
+            toast.success("Profile updated successfully.");
+        } catch (requestError) {
+            toast.error(requestError.response?.data?.message || "Profile update failed.");
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const resubmitIdCard = async event => {
+        event.preventDefault();
+        if (!idCardBase64) {
+            toast.error("Choose your college ID card first.");
+            return;
+        }
+        try {
+            setResubmitting(true);
+            await api.post("/verification/resubmit", { collegeIdCardBase64: idCardBase64 });
+            setProfile(previous => ({ ...previous, verificationStatus: "pending", verificationRejectionReason: "" }));
+            setIdCardBase64("");
+            setIdCardName("");
+            toast.success("ID card submitted. Verification is pending.");
+        } catch (requestError) {
+            toast.error(requestError.response?.data?.message || "ID card submission failed.");
+        } finally {
+            setResubmitting(false);
+        }
+    };
+
+    if (loading) {
+        return <PageContainer><Card><p className="text-sm text-slate-600">Loading your profile…</p></Card></PageContainer>;
+    }
+
+    if (loadError) {
+        return (
+            <PageContainer>
+                <Card className="!rounded-2xl">
+                    <div className="py-8 text-center">
+                        <h1 className="text-xl font-extrabold text-slate-900">Unable to load profile</h1>
+                        <p className="mt-2 text-sm leading-6 text-slate-600">{loadError}</p>
+                        <Button className="mt-5" onClick={loadProfile}>Try again</Button>
+                    </div>
+                </Card>
+            </PageContainer>
+        );
+    }
+
+    return (
+        <PageContainer className="!py-7 sm:!py-10">
+            <div className="mx-auto max-w-6xl">
+                <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                    <div>
+                        <p className="text-[10px] font-extrabold uppercase tracking-[.2em] text-[#365e85] sm:text-xs">Your account</p>
+                        <h1 className="mt-2 text-3xl font-extrabold tracking-[-.045em] text-slate-900 sm:text-4xl">Student profile</h1>
+                        <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">Keep your academic details and resume up to date. Your college verification status controls placement access.</p>
+                    </div>
+                    <Button variant="secondary" onClick={loadProfile} disabled={loading}>Refresh profile</Button>
+                </div>
+
+                <div className="grid items-start gap-5 lg:grid-cols-[minmax(260px,.8fr)_minmax(0,1.8fr)]">
+                    <div className="space-y-5">
+                        <ProfileSummaryCard profile={profile} />
+                        {profile.verificationStatus !== "verified" && (
+                            <CollegeVerificationCard
+                                profile={profile}
+                                idCardName={idCardName}
+                                resubmitting={resubmitting}
+                                onFileChange={event => pickFile(event, "id")}
+                                onSubmit={resubmitIdCard}
+                            />
+                        )}
+                    </div>
+                    <ProfileEditForm
+                        profile={profile}
+                        saving={saving}
+                        resumeName={resumeName}
+                        onChange={setField}
+                        onFileChange={event => pickFile(event, "resume")}
+                        onSubmit={saveProfile}
+                    />
+                </div>
+            </div>
+        </PageContainer>
+    );
 }
