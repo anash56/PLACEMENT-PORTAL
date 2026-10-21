@@ -35,7 +35,10 @@ function Modal({ open, title, children, onClose }) {
                                 <path d="m8.5 12 2.2 2.2 4.8-4.8" />
                             </svg>
                         </span>
-                        <h2 className="portal-modal-title">{title}</h2>
+                        <div className="portal-modal-heading-copy">
+                            <span className="portal-modal-eyebrow">PLACEMENT PORTAL</span>
+                            <h2 className="portal-modal-title">{title}</h2>
+                        </div>
                     </div>
                     <button type="button" className="portal-modal-close" onClick={onClose} aria-label="Close dialog">×</button>
                 </header>

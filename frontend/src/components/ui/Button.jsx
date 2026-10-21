@@ -6,12 +6,12 @@ function Button({
     onClick,
     className = "",
 }) {
-    const baseStyles = "portal-button inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.98] select-none";
+    const baseStyles = "portal-button inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.99] select-none";
 
     const variants = {
-        primary: "bg-[#245e9b] text-white shadow-sm hover:bg-[#1d4d82] hover:shadow-md focus:ring-[#245e9b]",
-        secondary: "border border-[#dce6f3] bg-white text-[#344b68] shadow-sm hover:border-[#c8d8ed] hover:bg-[#f7faff] focus:ring-[#9cb9dc]",
-        // Reserve the rose treatment for actions that truly reject, suspend, or delete.
+        primary: "bg-[#174f97] text-white shadow-sm hover:bg-[#123f78] hover:shadow-md focus:ring-[#5c91d5]",
+        secondary: "border border-[#d8e4f3] bg-[#f4f8fe] text-[#294867] shadow-sm hover:border-[#b9cfea] hover:bg-[#eaf2fd] focus:ring-[#9cb9dc]",
+        // Keep red/pink treatment for actions that reject, suspend, or delete records.
         danger: "border border-rose-200 bg-rose-50 text-rose-800 shadow-sm hover:border-rose-300 hover:bg-rose-100 focus:ring-rose-300",
     };
 
