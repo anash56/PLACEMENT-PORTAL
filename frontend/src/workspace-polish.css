@@ -32,11 +32,13 @@
   text-wrap: balance;
 }
 
+/* Keep foreground contrast in every navy gradient hero. The !important is intentional:
+   index.css contains an older, more-specific global h1 rule that otherwise turns these titles dark. */
 .portal-page h1.text-white,
 .portal-page [class*="linear-gradient"] h1,
 .portal-page [class*="linear-gradient"] h2,
 .portal-page [class*="linear-gradient"] h3 {
-  color: #fff;
+  color: #fff !important;
 }
 
 .portal-page h2 {
@@ -259,6 +261,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   .portal-card,
   .portal-button,
   .portal-admin-sidebar nav a {

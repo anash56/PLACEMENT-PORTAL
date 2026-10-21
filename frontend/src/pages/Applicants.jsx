@@ -62,9 +62,7 @@ export default function Applicants() {
         }
     }, [jobId]);
 
-    useEffect(() => {
-        fetchApplicants();
-    }, [fetchApplicants]);
+    useEffect(() => { fetchApplicants(); }, [fetchApplicants]);
 
     const visibleApplicants = useMemo(() => {
         const normalizedQuery = search.trim().toLocaleLowerCase();
@@ -72,24 +70,23 @@ export default function Applicants() {
             const student = application.student || {};
             const matchesStatus = statusFilter === "All statuses" || application.status === statusFilter;
             const searchableText = [student.name, student.email, student.branch, student.graduationYear, ...(Array.isArray(student.skills) ? student.skills : [])]
-                .filter(Boolean)
-                .join(" ")
-                .toLocaleLowerCase();
+                .filter(Boolean).join(" ").toLocaleLowerCase();
             return matchesStatus && (!normalizedQuery || searchableText.includes(normalizedQuery));
         });
     }, [applicants, search, statusFilter]);
 
     const updateStatus = async (applicationId, status) => {
         const currentApplication = applicants.find(application => application._id === applicationId);
-        if (!currentApplication || currentApplication.status === status) return;
-
+        if (!currentApplication || currentApplication.status === status) return false;
         try {
             setUpdatingApplicationId(applicationId);
             await api.patch(`/applications/${applicationId}`, { status });
             setApplicants(current => current.map(application => application._id === applicationId ? { ...application, status } : application));
             toast.success("Application status updated.");
+            return true;
         } catch (requestError) {
             toast.error(requestError.response?.data?.message || "Could not update the application status.");
+            return false;
         } finally {
             setUpdatingApplicationId(null);
         }
@@ -100,25 +97,13 @@ export default function Applicants() {
             toast.error("There are no visible applicants to export.");
             return;
         }
-
         const headers = ["Student Name", "Student Email", "Branch", "CGPA", "Graduation Year", "Contact Number", "Skills", "Application Status", "Applied Date"];
         const rows = visibleApplicants.map(application => {
             const student = application.student || {};
             const date = new Date(application.createdAt);
             const appliedDate = application.createdAt && !Number.isNaN(date.getTime()) ? date.toISOString().slice(0, 10) : "";
-            return [
-                student.name || "Unknown Student",
-                student.email || "",
-                student.branch || "Unspecified",
-                student.cgpa ?? "",
-                student.graduationYear || "",
-                student.contactNumber || "",
-                Array.isArray(student.skills) ? student.skills.join("; ") : "",
-                application.status || "Unknown",
-                appliedDate,
-            ];
+            return [student.name || "Unknown Student", student.email || "", student.branch || "Unspecified", student.cgpa ?? "", student.graduationYear || "", student.contactNumber || "", Array.isArray(student.skills) ? student.skills.join("; ") : "", application.status || "Unknown", appliedDate];
         });
-
         const csv = "\uFEFF" + [headers, ...rows].map(row => row.map(csvCell).join(",")).join("\r\n");
         const objectUrl = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" }));
         const link = document.createElement("a");
@@ -142,12 +127,7 @@ export default function Applicants() {
             <AdminPageHeader
                 title="Applicants"
                 description={job?.title ? `Review candidates for ${job.title}${job.company ? ` at ${job.company}` : ""}.` : "Review candidate profiles and keep application statuses up to date."}
-                actions={
-                    <>
-                        <Button onClick={exportVisibleApplicants} disabled={loading || visibleApplicants.length === 0}>Export CSV</Button>
-                        <Button variant="secondary" onClick={() => navigate("/admin/jobs")}>Back to jobs</Button>
-                    </>
-                }
+                actions={<><Button onClick={exportVisibleApplicants} disabled={loading || visibleApplicants.length === 0}>Export CSV</Button><Button variant="secondary" onClick={() => navigate("/admin/jobs")}>Back to jobs</Button></>}
             />
 
             {loading ? (
@@ -155,13 +135,7 @@ export default function Applicants() {
                     {[1, 2, 3, 4].map(item => <Card key={item} className="!p-5"><div className="animate-pulse space-y-3"><div className="h-3 w-2/5 rounded bg-slate-100" /><div className="h-7 w-1/3 rounded bg-slate-100" /><div className="h-3 w-3/4 rounded bg-slate-50" /></div></Card>)}
                 </div>
             ) : error ? (
-                <Card className="!p-6 sm:!p-8">
-                    <div className="mx-auto max-w-lg py-4 text-center">
-                        <h2 className="text-lg font-extrabold text-slate-900">Unable to load applicants</h2>
-                        <p className="mt-2 text-sm leading-6 text-slate-600">{error}</p>
-                        <div className="mt-5 flex justify-center gap-2"><Button variant="secondary" onClick={() => navigate("/admin/jobs")}>Back to jobs</Button><Button onClick={fetchApplicants}>Try again</Button></div>
-                    </div>
-                </Card>
+                <Card className="!p-6 sm:!p-8"><div className="mx-auto max-w-lg py-4 text-center"><h2 className="text-lg font-extrabold text-slate-900">Unable to load applicants</h2><p className="mt-2 text-sm leading-6 text-slate-600">{error}</p><div className="mt-5 flex justify-center gap-2"><Button variant="secondary" onClick={() => navigate("/admin/jobs")}>Back to jobs</Button><Button onClick={fetchApplicants}>Try again</Button></div></div></Card>
             ) : (
                 <>
                     <section className="mb-7 grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Applicant status summary">
@@ -174,45 +148,17 @@ export default function Applicants() {
                     <Card className="mb-6 !p-4 sm:!p-5">
                         <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_240px] md:items-end">
                             <Input label="Search applicants" type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder="Name, email, branch, graduation year, or skill" />
-                            <div className="w-full">
-                                <label htmlFor="applicant-status-filter" className="mb-2 block text-sm font-semibold text-slate-700">Application status</label>
-                                <select id="applicant-status-filter" value={statusFilter} onChange={event => setStatusFilter(event.target.value)} className="min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700">
-                                    {STATUS_OPTIONS.map(status => <option key={status} value={status}>{status}</option>)}
-                                </select>
-                            </div>
+                            <div className="w-full"><label htmlFor="applicant-status-filter" className="mb-2 block text-sm font-semibold text-slate-700">Application status</label><select id="applicant-status-filter" value={statusFilter} onChange={event => setStatusFilter(event.target.value)} className="min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700">{STATUS_OPTIONS.map(status => <option key={status} value={status}>{status}</option>)}</select></div>
                         </div>
-                        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3">
-                            <p className="text-xs font-medium text-slate-500">Showing {visibleApplicants.length} of {applicants.length} applicant{applicants.length === 1 ? "" : "s"}{filterIsActive ? " after filters" : ""}</p>
-                            {filterIsActive && <Button variant="secondary" onClick={() => { setSearch(""); setStatusFilter("All statuses"); }}>Clear filters</Button>}
-                        </div>
+                        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3"><p className="text-xs font-medium text-slate-500">Showing {visibleApplicants.length} of {applicants.length} applicant{applicants.length === 1 ? "" : "s"}{filterIsActive ? " after filters" : ""}</p>{filterIsActive && <Button variant="secondary" onClick={() => { setSearch(""); setStatusFilter("All statuses"); }}>Clear filters</Button>}</div>
                     </Card>
 
                     {applicants.length === 0 ? (
-                        <Card className="!p-7 sm:!p-10">
-                            <div className="mx-auto max-w-lg py-4 text-center">
-                                <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl border border-slate-200 bg-slate-50 text-[#365e85]" aria-hidden="true">◎</div>
-                                <h2 className="mt-4 text-lg font-extrabold text-slate-900">No applicants yet</h2>
-                                <p className="mt-2 text-sm leading-6 text-slate-600">Applications will appear here when eligible students apply to this role.</p>
-                                <Button variant="secondary" className="mt-5" onClick={() => navigate("/admin/jobs")}>Return to jobs</Button>
-                            </div>
-                        </Card>
+                        <Card className="!p-7 sm:!p-10"><div className="mx-auto max-w-lg py-4 text-center"><div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl border border-slate-200 bg-slate-50 text-[#365e85]" aria-hidden="true">◎</div><h2 className="mt-4 text-lg font-extrabold text-slate-900">No applicants yet</h2><p className="mt-2 text-sm leading-6 text-slate-600">Applications will appear here when eligible students apply to this role.</p><Button variant="secondary" className="mt-5" onClick={() => navigate("/admin/jobs")}>Return to jobs</Button></div></Card>
                     ) : visibleApplicants.length === 0 ? (
-                        <Card className="!p-7 text-center">
-                            <h2 className="text-lg font-extrabold text-slate-900">No applicants match these filters</h2>
-                            <p className="mt-2 text-sm text-slate-600">Clear the filters or try a different search term.</p>
-                            <Button variant="secondary" className="mt-4" onClick={() => { setSearch(""); setStatusFilter("All statuses"); }}>Clear filters</Button>
-                        </Card>
+                        <Card className="!p-7 text-center"><h2 className="text-lg font-extrabold text-slate-900">No applicants match these filters</h2><p className="mt-2 text-sm text-slate-600">Clear the filters or try a different search term.</p><Button variant="secondary" className="mt-4" onClick={() => { setSearch(""); setStatusFilter("All statuses"); }}>Clear filters</Button></Card>
                     ) : (
-                        <div className="space-y-4">
-                            {visibleApplicants.map(application => (
-                                <ApplicantCard
-                                    key={application._id}
-                                    application={application}
-                                    updating={updatingApplicationId === application._id}
-                                    onStatusChange={updateStatus}
-                                />
-                            ))}
-                        </div>
+                        <div className="space-y-4">{visibleApplicants.map(application => <ApplicantCard key={application._id} application={application} updating={updatingApplicationId === application._id} onStatusChange={updateStatus} />)}</div>
                     )}
                 </>
             )}

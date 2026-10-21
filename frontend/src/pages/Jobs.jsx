@@ -6,6 +6,7 @@ import { useAuth } from "../context/AuthContext";
 import PageContainer from "../components/ui/PageContainer";
 import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
+import ConfirmationModal from "../components/ui/ConfirmationModal";
 
 const Icon = ({ type, className = "h-5 w-5" }) => {
   const paths = {
@@ -23,6 +24,7 @@ const Icon = ({ type, className = "h-5 w-5" }) => {
   };
   return <svg aria-hidden="true" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">{paths[type]}</svg>;
 };
+
 const formatSalary = value => {
   const amount = Number(value);
   return Number.isFinite(amount) ? `₹${amount.toLocaleString("en-IN")}` : "Not specified";
@@ -44,6 +46,7 @@ export default function Jobs() {
   const [totalPages, setTotalPages] = useState(1);
   const [applied, setApplied] = useState([]);
   const [applying, setApplying] = useState(null);
+  const [pendingApplication, setPendingApplication] = useState(null);
   const [accessMessage, setAccessMessage] = useState("");
 
   const load = useCallback(async () => {
@@ -57,15 +60,32 @@ export default function Jobs() {
     } catch (e) { setError(e.response?.data?.message || "Failed to load jobs."); }
     finally { setLoading(false); }
   }, [isAuthenticated, submittedSearch, submittedLocation, sort, page]);
+
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
-    if (isStudent && user?.verificationStatus === "verified") api.get("/applications/my?limit=1000").then(r => setApplied((r.data.applications || []).filter(a => a.job).map(a => String(a.job._id)))).catch(() => {});
+    if (isStudent && user?.verificationStatus === "verified") {
+      api.get("/applications/my?limit=1000")
+        .then(response => setApplied((response.data.applications || []).filter(application => application.job).map(application => String(application.job._id))))
+        .catch(() => {});
+    }
   }, [isStudent, user?.verificationStatus]);
-  const apply = async id => {
-    try { setApplying(id); await api.post(`/applications/${id}`, {}); setApplied(prev => [...prev, String(id)]); toast.success("Application submitted."); }
-    catch (e) { toast.error(e.response?.data?.message || "Application failed."); }
-    finally { setApplying(null); }
+
+  const apply = async () => {
+    if (!pendingApplication?._id || applying) return;
+    const job = pendingApplication;
+    try {
+      setApplying(job._id);
+      await api.post(`/applications/${job._id}`, {});
+      setApplied(previous => previous.includes(String(job._id)) ? previous : [...previous, String(job._id)]);
+      setPendingApplication(null);
+      toast.success("Application submitted.");
+    } catch (e) {
+      toast.error(e.response?.data?.message || "Application failed.");
+    } finally {
+      setApplying(null);
+    }
   };
+
   const hasFilters = Boolean(submittedSearch || submittedLocation);
   const verifiedStudent = isStudent && user?.verificationStatus === "verified";
 
@@ -94,10 +114,10 @@ export default function Jobs() {
 
       {isAuthenticated && (!isStudent || verifiedStudent) && <section className="mb-7 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_8px_30px_rgba(18,57,109,.045)] sm:p-5">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2"><div><h2 className="text-lg font-extrabold text-slate-900">Find your fit</h2><p className="mt-1 text-xs text-slate-500">Narrow down openings by role, employer, or location.</p></div>{isCollegeAdmin && <Button onClick={() => navigate("/admin/jobs")} variant="secondary" className="inline-flex items-center gap-2"><Icon type="briefcase" className="h-4 w-4"/> Manage jobs</Button>}</div>
-        <form className="grid items-end gap-3 md:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)_minmax(170px,.8fr)_auto]" onSubmit={e => { e.preventDefault(); setPage(1); setSubmittedSearch(search.trim()); setSubmittedLocation(location.trim()); }}>
-          <div className="relative"><Icon type="search" className="pointer-events-none absolute left-3 top-[39px] h-4 w-4 text-slate-400"/><Input label="Keyword" value={search} onChange={e => setSearch(e.target.value)} placeholder="Job title or company" className="!pl-9 !py-3"/></div>
-          <div className="relative"><Icon type="pin" className="pointer-events-none absolute left-3 top-[39px] h-4 w-4 text-slate-400"/><Input label="Location" value={location} onChange={e => setLocation(e.target.value)} placeholder="City or country" className="!pl-9 !py-3"/></div>
-          <div><label htmlFor="jobs-sort" className="mb-2 block text-sm font-medium text-gray-700">Sort by</label><select id="jobs-sort" value={sort} onChange={e => { setSort(e.target.value); setPage(1); }} className="min-h-[46px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700"><option value="latest">Most recent</option><option value="salary">Highest salary</option></select></div>
+        <form className="grid items-end gap-3 md:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)_minmax(170px,.8fr)_auto]" onSubmit={event => { event.preventDefault(); setPage(1); setSubmittedSearch(search.trim()); setSubmittedLocation(location.trim()); }}>
+          <div className="relative"><Icon type="search" className="pointer-events-none absolute left-3 top-[39px] h-4 w-4 text-slate-400"/><Input label="Keyword" value={search} onChange={event => setSearch(event.target.value)} placeholder="Job title or company" className="!pl-9 !py-3"/></div>
+          <div className="relative"><Icon type="pin" className="pointer-events-none absolute left-3 top-[39px] h-4 w-4 text-slate-400"/><Input label="Location" value={location} onChange={event => setLocation(event.target.value)} placeholder="City or country" className="!pl-9 !py-3"/></div>
+          <div><label htmlFor="jobs-sort" className="mb-2 block text-sm font-medium text-gray-700">Sort by</label><select id="jobs-sort" value={sort} onChange={event => { setSort(event.target.value); setPage(1); }} className="min-h-[46px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700"><option value="latest">Most recent</option><option value="salary">Highest salary</option></select></div>
           <Button type="submit" className="inline-flex min-h-[46px] items-center justify-center gap-2 !px-5"><Icon type="search" className="h-4 w-4"/> Search</Button>
         </form>
         {(submittedSearch || submittedLocation) && <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-4"><span className="text-xs font-semibold text-slate-500">Active filters</span>{submittedSearch && <span className="rounded-full bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-800">{submittedSearch}</span>}{submittedLocation && <span className="rounded-full bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-800">{submittedLocation}</span>}<button type="button" className="ml-auto text-xs font-bold text-blue-700 hover:text-blue-900" onClick={() => { setSearch(""); setLocation(""); setSubmittedSearch(""); setSubmittedLocation(""); setPage(1); }}>Clear filters</button></div>}
@@ -118,7 +138,7 @@ export default function Jobs() {
                 {job.allowedBranches?.length > 0 && <p className="mt-4 text-xs leading-5 text-slate-600"><span className="font-bold text-slate-700">Eligible branches:</span> {job.allowedBranches.join(", ")}</p>}
                 {job.description && <p className="mt-4 line-clamp-4 whitespace-pre-wrap text-sm leading-7 text-slate-600">{job.description}</p>}
               </div></div>
-              <div className="flex shrink-0 flex-col gap-2 border-t border-slate-100 pt-4 md:w-44 md:border-l md:border-t-0 md:pl-5 md:pt-0">{isStudent && (alreadyApplied ? <Button disabled variant="secondary" className="w-full">Application sent</Button> : <Button disabled={applying === job._id || user?.verificationStatus !== "verified"} onClick={() => apply(job._id)} className="inline-flex w-full items-center justify-center gap-2">{applying === job._id ? "Applying…" : <>Apply now <Icon type="arrow" className="h-4 w-4"/></>}</Button>)}{isCollegeAdmin && <Button variant="secondary" onClick={() => navigate(`/admin/jobs/${job._id}/applicants`)} className="w-full">View applicants</Button>}{!isStudent && !isCollegeAdmin && <span className="text-xs leading-5 text-slate-500">Opportunity details</span>}{isStudent && !alreadyApplied && <p className="text-center text-[11px] leading-5 text-slate-400">Use your verified student account to apply.</p>}</div>
+              <div className="flex shrink-0 flex-col gap-2 border-t border-slate-100 pt-4 md:w-44 md:border-l md:border-t-0 md:pl-5 md:pt-0">{isStudent && (alreadyApplied ? <Button disabled variant="secondary" className="w-full">Application sent</Button> : <Button disabled={applying === job._id || user?.verificationStatus !== "verified"} onClick={() => setPendingApplication({ _id: String(job._id), title: job.title, company: job.company })} className="inline-flex w-full items-center justify-center gap-2">Apply now <Icon type="arrow" className="h-4 w-4"/></Button>)}{isCollegeAdmin && <Button variant="secondary" onClick={() => navigate(`/admin/jobs/${job._id}/applicants`)} className="w-full">View applicants</Button>}{!isStudent && !isCollegeAdmin && <span className="text-xs leading-5 text-slate-500">Opportunity details</span>}{isStudent && !alreadyApplied && <p className="text-center text-[11px] leading-5 text-slate-400">Use your verified student account to apply.</p>}</div>
             </div>
           </article>;
         })}</div>
@@ -127,5 +147,15 @@ export default function Jobs() {
       {isAuthenticated && totalPages > 1 && <nav aria-label="Opportunity pages" className="mt-7 flex flex-wrap items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"><Button variant="secondary" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>Previous</Button><span className="px-2 text-sm font-semibold tabular-nums text-slate-600">Page {page} of {totalPages}</span><Button variant="secondary" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>Next</Button></nav>}
       <div className="mt-8 flex flex-col items-start gap-3 rounded-2xl border border-slate-200/80 bg-white p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6"><div className="flex items-start gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-blue-50 text-blue-700"><Icon type="shield" className="h-5 w-5"/></span><div><h2 className="text-sm font-extrabold text-slate-800">Opportunities tailored to your college</h2><p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500">Job visibility and application access follow your college affiliation and student verification status.</p></div></div>{isStudent && <button type="button" onClick={() => navigate("/profile")} className="inline-flex shrink-0 items-center gap-2 text-sm font-bold text-blue-700 hover:text-blue-900">View profile <Icon type="arrow" className="h-4 w-4"/></button>}</div>
     </div>
+    <ConfirmationModal
+      open={Boolean(pendingApplication)}
+      title="Submit application?"
+      message={pendingApplication ? `You are about to apply for ${pendingApplication.title}${pendingApplication.company ? ` at ${pendingApplication.company}` : ""}. Confirm only if your profile and resume are ready. You can cancel now and review the role details first.` : "Confirm that you want to submit this application."}
+      confirmText="Submit application"
+      confirmVariant="primary"
+      loading={Boolean(applying)}
+      onCancel={() => { if (!applying) setPendingApplication(null); }}
+      onConfirm={apply}
+    />
   </PageContainer>;
 }

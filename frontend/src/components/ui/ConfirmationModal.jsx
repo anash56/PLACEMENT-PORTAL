@@ -1,99 +1,28 @@
 import Modal from "./Modal";
 import Button from "./Button";
 
-function ConfirmationModal({
-
+export default function ConfirmationModal({
     open,
-
     title,
-
     message,
-
     onCancel,
-
     onConfirm,
-
     loading = false,
-
-    confirmText = "Delete",
-
-    confirmVariant = "danger"
-
+    confirmText = "Confirm",
+    confirmVariant = "danger",
+    cancelText = "Cancel",
 }) {
-
     return (
-
-        <Modal
-
-            open={open}
-
-            title={title}
-
-            onClose={onCancel}
-
-        >
-
-            <p className="text-gray-600">
-
-                {message}
-
-            </p>
-
-            <div
-                className="
-                    mt-6
-                    flex
-                    justify-end
-                    gap-3
-                "
-            >
-
-                <Button
-
-                    variant="secondary"
-
-                    onClick={onCancel}
-
-                    disabled={loading}
-
-                >
-
-                    Cancel
-
+        <Modal open={open} title={title} onClose={() => { if (!loading) onCancel?.(); }}>
+            <p className="m-0 whitespace-pre-line text-sm leading-6 text-slate-600">{message}</p>
+            <div className="portal-modal-actions">
+                <Button variant="secondary" onClick={onCancel} disabled={loading}>
+                    {cancelText}
                 </Button>
-
-                <Button
-
-                    variant={confirmVariant}
-
-                    onClick={onConfirm}
-
-                    disabled={loading}
-
-                >
-
-                    {
-
-                        loading
-
-                        ?
-
-                        `${confirmText}...`
-
-                        :
-
-                        confirmText
-
-                    }
-
+                <Button variant={confirmVariant} onClick={onConfirm} disabled={loading}>
+                    {loading ? `${confirmText}…` : confirmText}
                 </Button>
-
             </div>
-
         </Modal>
-
     );
-
 }
-
-export default ConfirmationModal;

@@ -1,0 +1,133 @@
+/* Shared cross-role visual fixes. Loaded through the shared Modal component. */
+
+/* Existing index.css had a more-specific heading rule that overrode text-white
+   on gradient hero banners. Keep the rule centralized so every role benefits. */
+.portal-page header[class*="linear-gradient"] h1,
+.portal-page section[class*="linear-gradient"] h1,
+.portal-admin-scroll .portal-page header[class*="linear-gradient"] h1,
+.portal-admin-scroll .portal-page section[class*="linear-gradient"] h1 {
+  color: #fff !important;
+  -webkit-text-fill-color: #fff;
+}
+
+.portal-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  overflow-y: auto;
+  padding: 1rem;
+  background: rgb(5 20 43 / 58%);
+  backdrop-filter: blur(5px);
+  animation: portal-modal-fade-in .16s ease-out both;
+}
+
+.portal-modal-panel {
+  width: min(100%, 30rem);
+  max-height: min(88vh, 46rem);
+  overflow: auto;
+  border: 1px solid #e0e9f5;
+  border-radius: 1.25rem;
+  background: #fff;
+  box-shadow: 0 26px 80px rgb(3 20 46 / 26%);
+  animation: portal-modal-rise-in .2s ease-out both;
+}
+
+.portal-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid #e5edf7;
+  padding: 1.1rem 1.25rem;
+  background: linear-gradient(115deg, #f7faff 0%, #fff 100%);
+}
+
+.portal-modal-heading {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: .8rem;
+}
+
+.portal-modal-mark {
+  display: grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid #d7e7fb;
+  border-radius: .85rem;
+  color: #245e9b;
+  background: #edf5ff;
+}
+
+.portal-modal-title {
+  margin: 0;
+  color: #102747;
+  font-size: 1.08rem;
+  font-weight: 800;
+  line-height: 1.35;
+  letter-spacing: -.025em;
+  overflow-wrap: anywhere;
+}
+
+.portal-modal-close {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: .65rem;
+  color: #65768d;
+  background: transparent;
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.portal-modal-close:hover:not(:disabled) {
+  border-color: #e0e9f5;
+  color: #1d426c;
+  background: #edf5ff;
+}
+
+.portal-modal-body {
+  padding: 1.25rem;
+  color: #52657f;
+  font-size: .925rem;
+  line-height: 1.65;
+}
+
+.portal-modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: .65rem;
+  margin-top: 1.5rem;
+  border-top: 1px solid #edf2f8;
+  padding-top: 1rem;
+}
+
+@keyframes portal-modal-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes portal-modal-rise-in {
+  from { opacity: 0; transform: translateY(8px) scale(.99); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (max-width: 480px) {
+  .portal-modal-backdrop { padding: .75rem; }
+  .portal-modal-panel { border-radius: 1rem; }
+  .portal-modal-header, .portal-modal-body { padding: 1rem; }
+  .portal-modal-actions > button { flex: 1 1 auto; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .portal-modal-backdrop,
+  .portal-modal-panel { animation: none; }
+}
