@@ -2,58 +2,61 @@ import { useMemo, useState } from "react";
 import Card from "../../ui/Card";
 import ConfirmationModal from "../../ui/ConfirmationModal";
 
-export const APPLICATION_STATUSES = [
-    "Submitted",
-    "Under Review",
-    "Shortlisted",
-    "Offered",
-    "Rejected",
-    "Withdrawn",
-];
+export const FINAL_OUTCOME_STATUSES = ["Selected", "Rejected", "Withdrawn"];
 
-const LEGACY_STATUSES = ["Pending", "Test Scheduled", "Interview Scheduled"];
+const LEGACY_STATUSES = ["Pending", "Test Scheduled", "Interview Scheduled", "Shortlisted", "Offered"];
 const STATUS_STYLES = {
     Submitted: "border-blue-200 bg-blue-50 text-blue-800",
-    "Under Review": "border-amber-200 bg-amber-50 text-amber-800",
-    Pending: "border-amber-200 bg-amber-50 text-amber-800",
-    Shortlisted: "border-emerald-200 bg-emerald-50 text-emerald-800",
-    Offered: "border-green-200 bg-green-50 text-green-800",
+    Selected: "border-emerald-200 bg-emerald-50 text-emerald-800",
+    Offered: "border-emerald-200 bg-emerald-50 text-emerald-800",
     Rejected: "border-rose-200 bg-rose-50 text-rose-800",
     Withdrawn: "border-slate-200 bg-slate-100 text-slate-700",
-    "Test Scheduled": "border-sky-200 bg-sky-50 text-sky-800",
-    "Interview Scheduled": "border-indigo-200 bg-indigo-50 text-indigo-800",
+    Pending: "border-amber-200 bg-amber-50 text-amber-800",
 };
-const STATUS_LABELS = { Pending: "Under review" };
-const STATUS_OPTION_LABELS = { Pending: "Pending (existing record)", "Test Scheduled": "Test Scheduled (legacy)", "Interview Scheduled": "Interview Scheduled (legacy)" };
+const STATUS_LABELS = { Pending: "Pending (existing record)" };
 
 function formatDate(value) {
     const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? "Date unavailable" : date.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+    return Number.isNaN(date.getTime())
+        ? "Date unavailable"
+        : date.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 }
 
 export default function ApplicantCard({ application, job, updating, onStatusChange }) {
     const student = application.student || {};
     const status = application.status || "Submitted";
-    const selectionStages = Array.isArray(job?.selectionStages) ? job.selectionStages : Array.isArray(application.job?.selectionStages) ? application.job.selectionStages : [];
-    const statusOptions = useMemo(() => [...new Set([...APPLICATION_STATUSES, ...LEGACY_STATUSES.filter(value => value === status)])], [status]);
-    const [pendingChange, setPendingChange] = useState(null);
+    const workflowStages = useMemo(() => {
+        const snapshot = Array.isArray(application.workflowStages) ? application.workflowStages : [];
+        const jobStages = Array.isArray(job?.selectionStages)
+            ? job.selectionStages
+            : Array.isArray(application.job?.selectionStages) ? application.job.selectionStages : [];
+        const chosenStages = snapshot.length ? snapshot : ["Submitted", ...jobStages];
+        return [...new Set(chosenStages.filter(Boolean))];
+    }, [application.workflowStages, application.job?.selectionStages, job?.selectionStages]);
+    const statusOptions = useMemo(() => {
+        const options = [...workflowStages, ...FINAL_OUTCOME_STATUSES];
+        if (LEGACY_STATUSES.includes(status) && !options.includes(status)) options.push(status);
+        return [...new Set(options)];
+    }, [status, workflowStages]);
+
+    const [pendingStatus, setPendingStatus] = useState(null);
     const [changeNote, setChangeNote] = useState("");
     const [confirming, setConfirming] = useState(false);
 
-    const requestChange = (kind, value) => {
-        const current = kind === "status" ? status : application.currentStage || "";
-        if (value !== current) setPendingChange({ kind, value, current });
+    const requestStatusChange = nextStatus => {
+        if (nextStatus !== status) setPendingStatus({ value: nextStatus, current: status });
     };
 
-    const confirmChange = async () => {
-        if (!pendingChange || confirming || updating) return;
+    const confirmStatusChange = async () => {
+        if (!pendingStatus || confirming || updating) return;
         setConfirming(true);
         try {
-            const updates = { [pendingChange.kind]: pendingChange.value };
-            if (changeNote.trim()) updates.note = changeNote.trim();
-            const updated = await onStatusChange(application._id, updates);
+            const updated = await onStatusChange(application._id, {
+                status: pendingStatus.value,
+                note: changeNote.trim(),
+            });
             if (updated !== false) {
-                setPendingChange(null);
+                setPendingStatus(null);
                 setChangeNote("");
             }
         } finally {
@@ -61,13 +64,10 @@ export default function ApplicantCard({ application, job, updating, onStatusChan
         }
     };
 
-    const isStatusChange = pendingChange?.kind === "status";
-    const isRejection = isStatusChange && pendingChange?.value === "Rejected";
-    const currentStage = application.currentStage || "";
-    const stageOptions = [...new Set([...selectionStages, ...(currentStage && !selectionStages.includes(currentStage) ? [currentStage] : [])])];
     const lastStatusUpdate = Array.isArray(application.statusHistory) && application.statusHistory.length
         ? application.statusHistory[application.statusHistory.length - 1]
         : null;
+    const isRejection = pendingStatus?.value === "Rejected";
 
     return (
         <>
@@ -82,7 +82,9 @@ export default function ApplicantCard({ application, job, updating, onStatusChan
                                 <h2 className="break-words text-lg font-extrabold text-slate-900">{student.name || "Unknown student"}</h2>
                                 <p className="mt-0.5 break-words text-sm text-slate-600">{student.email || "Email unavailable"}</p>
                                 <div className="mt-2 flex flex-wrap items-center gap-2">
-                                    <span className={`inline-flex max-w-full items-center rounded-full border px-2.5 py-1 text-[11px] font-extrabold ${STATUS_STYLES[status] || "border-slate-200 bg-slate-50 text-slate-700"}`}>{STATUS_LABELS[status] || status}</span>
+                                    <span className={`inline-flex max-w-full items-center rounded-full border px-2.5 py-1 text-[11px] font-extrabold ${STATUS_STYLES[status] || "border-blue-100 bg-blue-50 text-[#245e9b]"}`}>
+                                        {STATUS_LABELS[status] || status}
+                                    </span>
                                     {student.verificationStatus && (
                                         <span className={`inline-flex max-w-full items-center rounded-full border px-2.5 py-1 text-[11px] font-bold ${student.verificationStatus === "verified" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-slate-200 bg-slate-50 text-slate-700"}`}>
                                             {student.verificationStatus === "verified" ? "College verified" : `Verification: ${student.verificationStatus}`}
@@ -120,57 +122,41 @@ export default function ApplicantCard({ application, job, updating, onStatusChan
                                 <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700">No resume uploaded</span>
                             )}
                         </div>
-                        {lastStatusUpdate && <p className="mt-4 break-words rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-2 text-xs leading-5 text-slate-600">Latest update: {STATUS_LABELS[lastStatusUpdate.status] || lastStatusUpdate.status}{lastStatusUpdate.note ? ` — ${lastStatusUpdate.note}` : ""}</p>}
+                        {lastStatusUpdate && <p className="mt-4 break-words rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs leading-5 text-slate-600">
+                            Latest update: {STATUS_LABELS[lastStatusUpdate.status] || lastStatusUpdate.status}{lastStatusUpdate.note ? ` — ${lastStatusUpdate.note}` : ""}
+                        </p>}
                     </div>
 
-                    <div className="grid w-full min-w-0 gap-4 rounded-2xl border border-slate-200 bg-slate-50/80 p-4 lg:w-72 lg:shrink-0">
+                    <div className="grid w-full min-w-0 gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-4 lg:w-72 lg:shrink-0">
                         <div className="min-w-0">
-                            <label htmlFor={`status-${application._id}`} className="mb-2 block text-xs font-extrabold uppercase tracking-[.1em] text-slate-700">Overall status</label>
+                            <label htmlFor={`status-${application._id}`} className="mb-2 block text-xs font-extrabold uppercase tracking-[.1em] text-slate-700">Current workflow status</label>
                             <select
                                 id={`status-${application._id}`}
                                 value={status}
                                 disabled={updating || confirming}
-                                onChange={event => requestChange("status", event.target.value)}
+                                onChange={event => requestStatusChange(event.target.value)}
                                 className="min-h-11 w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 disabled:cursor-wait disabled:opacity-60"
                             >
-                                {statusOptions.map(option => <option key={option} value={option}>{STATUS_OPTION_LABELS[option] || option}</option>)}
+                                {statusOptions.map(option => <option key={option} value={option}>{STATUS_LABELS[option] || option}</option>)}
                             </select>
-                            <p className="mt-2 text-xs leading-5 text-slate-600">Tracks the overall outcome, not a fixed company pipeline.</p>
+                            <p className="mt-2 text-xs leading-5 text-slate-600">One status represents the applicant's current stage or final outcome for this job.</p>
                         </div>
-
-                        {(selectionStages.length > 0 || currentStage) && (
-                            <div className="min-w-0">
-                                <label htmlFor={`stage-${application._id}`} className="mb-2 block text-xs font-extrabold uppercase tracking-[.1em] text-slate-700">Job-specific hiring stage</label>
-                                <select
-                                    id={`stage-${application._id}`}
-                                    value={currentStage}
-                                    disabled={updating || confirming}
-                                    onChange={event => requestChange("stage", event.target.value)}
-                                    className="min-h-11 w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 disabled:cursor-wait disabled:opacity-60"
-                                >
-                                    <option value="">No stage assigned</option>
-                                    {stageOptions.map(stage => <option key={stage} value={stage}>{stage}</option>)}
-                                </select>
-                                <p className="mt-2 text-xs leading-5 text-slate-600">Choose only the stage that has actually been reached.</p>
-                            </div>
-                        )}
-
+                        <p className="text-xs leading-5 text-slate-600">{updating || confirming ? "Saving update…" : "Confirm each change. Add a note if the student needs context."}</p>
                     </div>
                 </div>
             </Card>
 
             <ConfirmationModal
-                open={Boolean(pendingChange)}
-                title={isStatusChange ? "Update application status?" : "Update hiring stage?"}
-                message={pendingChange ? isStatusChange
-                    ? `Change ${student.name || "this candidate"}'s overall status from ${STATUS_LABELS[pendingChange.current] || pendingChange.current} to ${STATUS_LABELS[pendingChange.value] || pendingChange.value}? The student can see this change and its note.`
-                    : `Change ${student.name || "this candidate"}'s hiring stage from ${pendingChange.current || "not assigned"} to ${pendingChange.value}? The activity will be recorded for the student.`
+                open={Boolean(pendingStatus)}
+                title={isRejection ? "Record rejection?" : "Update application status?"}
+                message={pendingStatus
+                    ? `Change ${student.name || "this candidate"}'s status from "${pendingStatus.current}" to "${pendingStatus.value}"? This becomes the single current status visible to the student.`
                     : "Confirm this application update."}
-                confirmText={isRejection ? "Confirm rejection" : isStatusChange ? "Update status" : "Update stage"}
+                confirmText={isRejection ? "Confirm rejection" : "Update status"}
                 confirmVariant={isRejection ? "danger" : "primary"}
                 loading={confirming || updating}
-                onCancel={() => { if (!confirming && !updating) { setPendingChange(null); setChangeNote(""); } }}
-                onConfirm={confirmChange}
+                onCancel={() => { if (!confirming && !updating) { setPendingStatus(null); setChangeNote(""); } }}
+                onConfirm={confirmStatusChange}
             >
                 <div className="mt-4 min-w-0">
                     <label htmlFor={`update-note-${application._id}`} className="mb-2 block text-xs font-extrabold uppercase tracking-[.1em] text-slate-700">Update note <span className="font-semibold normal-case text-slate-500">(optional)</span></label>
@@ -181,7 +167,7 @@ export default function ApplicantCard({ application, job, updating, onStatusChan
                         value={changeNote}
                         onChange={event => setChangeNote(event.target.value)}
                         disabled={confirming || updating}
-                        placeholder="Explain the change or share the next step. This note will be visible to the student."
+                        placeholder="Share useful context or the next step. This note will be visible to the student."
                         className="w-full min-w-0 resize-y rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm leading-5 text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 disabled:opacity-60"
                     />
                     <p className="mt-1 text-right text-[11px] tabular-nums text-slate-500">{changeNote.length}/500</p>

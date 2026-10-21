@@ -1,26 +1,23 @@
 import mongoose from "mongoose";
 
-export const APPLICATION_STATUSES = [
-    "Submitted",
-    "Under Review",
+// Workflow stages are job-specific, so custom stage names cannot be constrained by a fixed enum.
+export const FINAL_APPLICATION_STATUSES = ["Selected", "Rejected", "Withdrawn"];
+export const LEGACY_APPLICATION_STATUSES = [
+    "Pending",
+    "Test Scheduled",
+    "Interview Scheduled",
     "Shortlisted",
     "Offered",
-    "Rejected",
-    "Withdrawn",
 ];
 
-// Keep legacy values readable so existing applications remain valid without a migration.
-export const LEGACY_APPLICATION_STATUSES = ["Pending", "Test Scheduled", "Interview Scheduled"];
-export const ALL_APPLICATION_STATUSES = [...APPLICATION_STATUSES, ...LEGACY_APPLICATION_STATUSES];
-
 const statusHistorySchema = new mongoose.Schema({
-    status: { type: String, enum: ALL_APPLICATION_STATUSES, required: true },
+    status: { type: String, trim: true, required: true, maxlength: 80 },
     note: { type: String, trim: true, maxlength: 500, default: "" },
     changedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
     changedAt: { type: Date, default: Date.now },
 }, { _id: false });
 
-const stageHistorySchema = new mongoose.Schema({
+const legacyStageHistorySchema = new mongoose.Schema({
     stage: { type: String, trim: true, required: true, maxlength: 80 },
     note: { type: String, trim: true, maxlength: 500, default: "" },
     changedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
@@ -30,11 +27,16 @@ const stageHistorySchema = new mongoose.Schema({
 const applicationSchema = new mongoose.Schema({
     student: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     job: { type: mongoose.Schema.Types.ObjectId, ref: "Job", required: true },
-    status: { type: String, enum: ALL_APPLICATION_STATUSES, default: "Submitted" },
+
+    // The only active workflow value. It is either a stage in workflowStages or a final outcome.
+    status: { type: String, trim: true, required: true, default: "Submitted", maxlength: 80 },
+    // Snapshot of the job's workflow at application time; later job edits don't silently change it.
+    workflowStages: { type: [{ type: String, trim: true, maxlength: 80 }], default: [] },
     statusHistory: { type: [statusHistorySchema], default: [] },
-    // A stage is set only when the job owner configures selectionStages on that job.
-    currentStage: { type: String, trim: true, default: "", maxlength: 80 },
-    stageHistory: { type: [stageHistorySchema], default: [] },
+
+    // Legacy-only read compatibility. New code neither writes nor displays a separate stage track.
+    currentStage: { type: String, trim: true, default: "", maxlength: 80, select: false },
+    stageHistory: { type: [legacyStageHistorySchema], default: [], select: false },
 }, { timestamps: true });
 
 applicationSchema.index({ student: 1, job: 1 }, { unique: true });

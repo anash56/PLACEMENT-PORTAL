@@ -1,0 +1,35 @@
+/* Global contrast safeguard: dark navy gradients get white headings; light gradient
+   callouts get navy headings. This intentionally overrides the older broad selector
+   that treated every gradient as a dark background. */
+.portal-page [class*="linear-gradient"]:not([class*="#071b3b"]) :is(h1, h2, h3) {
+    color: #102747 !important;
+    -webkit-text-fill-color: #102747 !important;
+}
+
+.portal-page [class*="linear-gradient"][class*="#071b3b"] :is(h1, h2, h3),
+.portal-page [class*="#071b3b"] :is(h1, h2, h3) {
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+}
+
+/* Keep controls and cards within viewport widths on small screens. */
+.portal-page,
+.portal-page-content,
+.portal-page article,
+.portal-page section,
+.portal-page aside {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.portal-page :is(h1, h2, h3, p, span, a, button) {
+    overflow-wrap: anywhere;
+}
+
+.portal-page button:focus-visible,
+.portal-page a:focus-visible,
+.portal-page select:focus-visible,
+.portal-page textarea:focus-visible {
+    outline: 3px solid #75a8ee;
+    outline-offset: 2px;
+}

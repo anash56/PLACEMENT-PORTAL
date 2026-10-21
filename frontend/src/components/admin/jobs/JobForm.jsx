@@ -1,10 +1,29 @@
+import { useState } from "react";
 import Button from "../../ui/Button";
 import Input from "../../ui/Input";
 import Textarea from "../../ui/TextArea";
 import Card from "../../ui/Card";
 
+const WORKFLOW_TEMPLATES = [
+    { value: "review-interview", label: "Resume review and interview", stages: ["Resume review", "Interview"] },
+    { value: "assessment-interviews", label: "Assessment and interviews", stages: ["Resume review", "Online assessment", "Technical interview", "HR interview"] },
+    { value: "technical-rounds", label: "Multi-round technical hiring", stages: ["Resume review", "Coding assessment", "Technical interview 1", "Technical interview 2", "HR interview"] },
+    { value: "internship", label: "Internship selection", stages: ["Resume review", "Task assessment", "Interview"] },
+];
+
 export default function JobForm({ formData, onChange, onSubmit, saving, mode = "create", onCancel }) {
     const isEdit = mode === "edit";
+    const [selectedTemplate, setSelectedTemplate] = useState("");
+
+    const applyTemplate = event => {
+        const template = WORKFLOW_TEMPLATES.find(item => item.value === event.target.value);
+        if (!template) {
+            setSelectedTemplate("");
+            return;
+        }
+        onChange({ target: { name: "selectionStagesText", value: template.stages.join("\n") } });
+        setSelectedTemplate("");
+    };
 
     return (
         <Card className="!p-5 sm:!p-7">
@@ -37,18 +56,33 @@ export default function JobForm({ formData, onChange, onSubmit, saving, mode = "
                         <Input label="Application deadline" name="deadline" type="date" value={formData.deadline} onChange={onChange} />
                     </div>
                     <Input label="Allowed branches (comma-separated)" name="allowedBranchesText" type="text" placeholder="e.g. Information Technology, Computer Engineering" value={formData.allowedBranchesText} onChange={onChange} />
-                    <p className="text-xs leading-5 text-slate-500">Leave the branch list empty to allow all branches. Use branch names that match student profiles.</p>
+                    <p className="text-xs leading-5 text-slate-600">Leave the branch list empty to allow all branches. Use branch names that match student profiles.</p>
                 </fieldset>
 
                 <div className="h-px bg-slate-100" />
 
                 <fieldset className="space-y-3">
-                    <legend className="mb-2 flex items-center gap-2 text-sm font-extrabold text-slate-800">
+                    <legend className="mb-2 flex flex-wrap items-center gap-2 text-sm font-extrabold text-slate-800">
                         <span className="grid h-7 w-7 place-items-center rounded-lg bg-blue-50 text-xs font-extrabold text-[#245e9b]">03</span>
-                        Hiring stages <span className="font-semibold text-slate-400">(optional)</span>
+                        Hiring workflow <span className="font-semibold text-slate-500">(optional)</span>
                     </legend>
+                    <p className="text-sm leading-6 text-slate-600">
+                        Set the stages used for this job. Students start at Submitted, and admins update the single current status as each real step occurs.
+                    </p>
+                    <div>
+                        <label htmlFor="workflow-template" className="mb-2 block text-sm font-semibold text-slate-700">Start with a template</label>
+                        <select
+                            id="workflow-template"
+                            value={selectedTemplate}
+                            onChange={applyTemplate}
+                            className="min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                        >
+                            <option value="">Choose a starter template…</option>
+                            {WORKFLOW_TEMPLATES.map(template => <option key={template.value} value={template.value}>{template.label}</option>)}
+                        </select>
+                    </div>
                     <Textarea
-                        label="Selection stages, in order"
+                        label="Workflow stages, in order"
                         name="selectionStagesText"
                         value={formData.selectionStagesText || ""}
                         onChange={onChange}
@@ -56,9 +90,12 @@ export default function JobForm({ formData, onChange, onSubmit, saving, mode = "
                         maxLength={1100}
                         placeholder={"Resume review\nOnline assessment\nTechnical interview\nHR interview"}
                     />
-                    <p className="text-xs leading-5 text-slate-500">
-                        Enter one stage per line, in the order used for this job. You can define up to 12 stages. Leave this empty if you only want to track the overall application status. These stages are informational; admins update them when an actual step occurs.
+                    <p className="text-xs leading-5 text-slate-600">
+                        Edit the template as needed, with one stage per line. Up to 12 stages are allowed. Submitted, Selected, Rejected, Withdrawn, and the legacy outcome Offered are reserved portal statuses and must not be added here. Leave this empty if applications should go from Submitted directly to a final outcome.
                     </p>
+                    {isEdit && <p className="rounded-xl border border-blue-100 bg-blue-50/70 px-3 py-2.5 text-xs leading-5 text-[#23476f]">
+                        Existing applications keep the workflow snapshot they started with. Changes here apply to new applications.
+                    </p>}
                 </fieldset>
 
                 <div className="flex flex-col-reverse gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:justify-end">

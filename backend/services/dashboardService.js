@@ -10,11 +10,7 @@ const fail = (message, statusCode = 400) => Object.assign(new Error(message), { 
 export const getDashboardStats = async ({ role, college } = {}) => {
     const isCollegeAdmin = role === "college_admin";
     const isSuperAdmin = role === "super_admin";
-
-    // Fail closed. A college admin without a valid college must never receive global statistics.
-    if (!isCollegeAdmin && !isSuperAdmin) {
-        throw fail("Administrator access required.", 403);
-    }
+    if (!isCollegeAdmin && !isSuperAdmin) throw fail("Administrator access required.", 403);
     if (isCollegeAdmin && !mongoose.isValidObjectId(college)) {
         throw fail("Your admin account is not linked to a valid college.", 403);
     }
@@ -61,28 +57,23 @@ export const getDashboardStats = async ({ role, college } = {}) => {
             { $group: { _id: null, averageSalary: { $avg: "$salary" }, maxSalary: { $max: "$salary" }, minSalary: { $min: "$salary" } } },
         ]),
         Application.aggregate([
-            { $match: { ...appFilter, status: "Offered" } },
+            // "Offered" is retained for older records; new workflows use the shared "Selected" outcome.
+            { $match: { ...appFilter, status: { $in: ["Selected", "Offered"] } } },
             { $lookup: { from: "jobs", localField: "job", foreignField: "_id", as: "jobDetails" } },
             { $unwind: "$jobDetails" },
             ...(collegeId ? [{ $match: { "jobDetails.college": collegeId } }] : []),
             { $group: { _id: null, averagePlacedSalary: { $avg: "$jobDetails.salary" }, maxPlacedSalary: { $max: "$jobDetails.salary" }, minPlacedSalary: { $min: "$jobDetails.salary" } } },
         ]),
-        isCollegeAdmin
-            ? User.countDocuments({ ...userFilter, verificationStatus: "pending" })
-            : Promise.resolve(0),
+        isCollegeAdmin ? User.countDocuments({ ...userFilter, verificationStatus: "pending" }) : Promise.resolve(0),
         isCollegeAdmin ? Job.countDocuments(deadlineFilter) : Promise.resolve(0),
         isCollegeAdmin
-            ? Job.find(deadlineFilter)
-                .select("_id title company deadline")
-                .sort({ deadline: 1 })
-                .limit(5)
-                .lean()
+            ? Job.find(deadlineFilter).select("_id title company deadline").sort({ deadline: 1 }).limit(5).lean()
             : Promise.resolve([]),
         isCollegeAdmin
             ? Job.find(jobFilter)
-                .select("_id title company location salary minCgpa allowedBranches deadline createdAt")
+                .select("_id title company location salary minCgpa allowedBranches deadline createdAt selectionStages")
                 .sort({ createdAt: -1 })
-                .limit(4)
+                .limit(2)
                 .lean()
             : Promise.resolve([]),
         isCollegeAdmin
@@ -91,21 +82,16 @@ export const getDashboardStats = async ({ role, college } = {}) => {
                 .populate({ path: "student", select: "name branch cgpa graduationYear" })
                 .populate({ path: "job", select: "title company deadline" })
                 .sort({ createdAt: -1 })
-                .limit(6)
+                .limit(2)
                 .lean()
             : Promise.resolve([]),
     ]);
 
-    const statusBreakdown = {
-        Pending: 0,
-        "Test Scheduled": 0,
-        "Interview Scheduled": 0,
-        Shortlisted: 0,
-        Offered: 0,
-        Rejected: 0,
-    };
+    // Statuses are data-driven because each job can define its own workflow stages.
+    const statusBreakdown = {};
     statusAggregation.forEach(item => {
-        if (statusBreakdown[item._id] !== undefined) statusBreakdown[item._id] = item.count;
+        const key = typeof item._id === "string" && item._id.trim() ? item._id : "Status unavailable";
+        statusBreakdown[key] = item.count;
     });
 
     const salary = salaryAggregation[0] || zero;
@@ -116,10 +102,7 @@ export const getDashboardStats = async ({ role, college } = {}) => {
         totalJobs,
         totalApplications,
         statusBreakdown,
-        branchBreakdown: branchAggregation.map(item => ({
-            name: item._id?.trim() || "Unspecified",
-            value: item.count,
-        })),
+        branchBreakdown: branchAggregation.map(item => ({ name: item._id?.trim() || "Unspecified", value: item.count })),
         salaryStats: {
             averageSalary: Math.round(salary.averageSalary || 0),
             maxSalary: salary.maxSalary || 0,
@@ -127,7 +110,7 @@ export const getDashboardStats = async ({ role, college } = {}) => {
         },
         placedSalaryStats: {
             averagePlacedSalary: Math.round(placed.averagePlacedSalary || 0),
-            maxPlacedSalary: placed.maxPlacedSalary || 0,
+            maxPlacedSalary: placed.maxSalary || 0,
             minPlacedSalary: placed.minPlacedSalary || 0,
         },
         pendingStudentVerifications,

@@ -15,6 +15,7 @@ export default function JobListingCard({ job, onViewApplicants, onEdit, onDelete
     const deadline = job.deadline ? new Date(job.deadline) : null;
     const deadlinePassed = deadline && !Number.isNaN(deadline.getTime()) && deadline < new Date(new Date().setHours(0, 0, 0, 0));
     const branches = Array.isArray(job.allowedBranches) ? job.allowedBranches.filter(Boolean) : [];
+    const stages = Array.isArray(job.selectionStages) ? job.selectionStages.filter(Boolean) : [];
 
     return (
         <Card className="!p-5 sm:!p-6">
@@ -31,39 +32,52 @@ export default function JobListingCard({ job, onViewApplicants, onEdit, onDelete
                     </div>
 
                     <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                        <div className="rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-2.5">
-                            <p className="text-[10px] font-extrabold uppercase tracking-[.12em] text-slate-500">Location</p>
-                            <p className="mt-1 break-words text-sm font-semibold text-slate-800">{job.location || "Not specified"}</p>
-                        </div>
-                        <div className="rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-2.5">
-                            <p className="text-[10px] font-extrabold uppercase tracking-[.12em] text-slate-500">Annual salary</p>
-                            <p className="mt-1 break-words text-sm font-semibold text-slate-800">{formatSalary(job.salary)}</p>
-                        </div>
-                        <div className="rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-2.5">
-                            <p className="text-[10px] font-extrabold uppercase tracking-[.12em] text-slate-500">Minimum CGPA</p>
-                            <p className="mt-1 text-sm font-semibold text-slate-800">{Number(job.minCgpa || 0) > 0 ? `${job.minCgpa} / 10` : "No minimum"}</p>
-                        </div>
+                        <Info label="Location" value={job.location || "Not specified"} />
+                        <Info label="Annual salary" value={formatSalary(job.salary)} />
+                        <Info label="Minimum CGPA" value={Number(job.minCgpa || 0) > 0 ? `${job.minCgpa} / 10` : "No minimum"} />
                     </div>
 
-                    {job.description && (
-                        <p className="mt-4 line-clamp-3 whitespace-pre-wrap break-words text-sm leading-6 text-slate-600">{job.description}</p>
-                    )}
+                    {job.description && <p className="mt-4 line-clamp-3 whitespace-pre-wrap break-words text-sm leading-6 text-slate-600">{job.description}</p>}
+
                     <div className="mt-4 flex flex-wrap items-center gap-2">
-                        <span className="text-xs font-bold text-slate-600">Eligible branches:</span>
+                        <span className="text-xs font-bold text-slate-700">Eligible branches:</span>
                         {branches.length ? branches.slice(0, 6).map(branch => (
-                            <span key={branch} className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600">{branch}</span>
-                        )) : <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-600">All branches</span>}
-                        {branches.length > 6 && <span className="text-xs text-slate-500">+{branches.length - 6} more</span>}
+                            <span key={branch} className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700">{branch}</span>
+                        )) : <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700">All branches</span>}
+                        {branches.length > 6 && <span className="text-xs text-slate-600">+{branches.length - 6} more</span>}
                     </div>
-                    <p className="mt-4 text-xs text-slate-500">Posted {job.createdAt ? formatDate(job.createdAt) : "date unavailable"}</p>
+
+                    <div className="mt-4 flex flex-wrap items-start gap-2">
+                        <span className="pt-1 text-xs font-bold text-slate-700">Workflow:</span>
+                        {stages.length ? stages.slice(0, 4).map(stage => (
+                            <span key={stage} className="rounded-full border border-blue-100 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-[#245e9b]">{stage}</span>
+                        )) : <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-600">Submitted → final outcome</span>}
+                        {stages.length > 4 && <span className="pt-1 text-xs text-slate-600">+{stages.length - 4} more</span>}
+                    </div>
+                    <p className="mt-4 text-xs text-slate-600">Posted {job.createdAt ? formatDate(job.createdAt) : "date unavailable"}</p>
                 </div>
 
                 <div className="grid shrink-0 grid-cols-1 gap-2 sm:grid-cols-3 lg:w-40 lg:grid-cols-1">
                     <Button variant="secondary" onClick={() => onViewApplicants(job._id)} className="w-full">View applicants</Button>
                     <Button variant="secondary" onClick={() => onEdit(job._id)} className="w-full">Edit job</Button>
-                    <Button variant="danger" onClick={() => onDelete(job)} className="w-full">Delete job</Button>
+                    <Button
+                        variant="secondary"
+                        onClick={() => onDelete(job)}
+                        className="w-full !border-slate-200 !bg-slate-50 !text-slate-700 hover:!border-blue-200 hover:!bg-blue-50 hover:!text-[#245e9b]"
+                    >
+                        Delete job
+                    </Button>
                 </div>
             </div>
         </Card>
+    );
+}
+
+function Info({ label, value }) {
+    return (
+        <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2.5">
+            <p className="text-[10px] font-extrabold uppercase tracking-[.12em] text-slate-600">{label}</p>
+            <p className="mt-1 break-words text-sm font-semibold text-slate-800">{value}</p>
+        </div>
     );
 }

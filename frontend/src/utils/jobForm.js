@@ -10,13 +10,14 @@ export const EMPTY_JOB_FORM = {
     deadline: "",
 };
 
+const RESERVED_WORKFLOW_STAGES = new Set(["submitted", "selected", "rejected", "withdrawn", "offered"]);
+
 export function jobToForm(job = {}) {
     let deadline = "";
     if (job.deadline) {
         const date = new Date(job.deadline);
         if (!Number.isNaN(date.getTime())) deadline = date.toISOString().slice(0, 10);
     }
-
     return {
         title: job.title ?? "",
         company: job.company ?? "",
@@ -35,7 +36,7 @@ function parseCommaSeparatedUnique(value, maxLength = 80) {
         .split(",")
         .map(item => item.trim())
         .filter(Boolean)
-        .map(item => item.slice(0, maxLength)) )];
+        .map(item => item.slice(0, maxLength)))];
 }
 
 export function parseSelectionStages(value) {
@@ -51,12 +52,10 @@ export function validateJobForm(form) {
     if (!form.title.trim() || !form.company.trim() || !form.location.trim() || !form.description.trim()) {
         return "Enter a job title, company, location, and description.";
     }
-
     const salary = Number(form.salary);
     if (form.salary === "" || !Number.isFinite(salary) || salary < 0) {
         return "Salary must be a valid non-negative number.";
     }
-
     if (form.minCgpa !== "") {
         const minCgpa = Number(form.minCgpa);
         if (!Number.isFinite(minCgpa) || minCgpa < 0 || minCgpa > 10) {
@@ -65,11 +64,12 @@ export function validateJobForm(form) {
     }
 
     const stages = String(form.selectionStagesText || "").split(/[\n,]/).map(stage => stage.trim()).filter(Boolean);
-    if (stages.length > 12) return "Add no more than 12 selection stages.";
-    if (stages.some(stage => stage.length > 80)) return "Each selection stage must be 80 characters or fewer.";
-    const uniqueStages = new Set(stages.map(stage => stage.toLocaleLowerCase()));
-    if (uniqueStages.size !== stages.length) return "Remove duplicate selection stages. Each stage should appear once.";
-
+    if (stages.length > 12) return "Add no more than 12 workflow stages.";
+    if (stages.some(stage => stage.length > 80)) return "Each workflow stage must be 80 characters or fewer.";
+    const keys = stages.map(stage => stage.toLocaleLowerCase());
+    if (new Set(keys).size !== keys.length) return "Remove duplicate workflow stages. Each stage should appear once.";
+    const reserved = stages.find(stage => RESERVED_WORKFLOW_STAGES.has(stage.toLocaleLowerCase()));
+    if (reserved) return `"${reserved}" is reserved by the portal and cannot be a custom workflow stage.`;
     return "";
 }
 
