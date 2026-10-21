@@ -63,6 +63,15 @@ body {
   overflow-wrap: anywhere;
 }
 
+/* The application-success callout is a light blue/white gradient, not a dark hero.
+   Keep its heading navy even though generic gradient-heading rules elsewhere in the
+   site use white text for genuinely dark hero banners. The ID selector has enough
+   specificity to override the old broad gradient rule. */
+.portal-page #application-action-title {
+  color: #102747 !important;
+  -webkit-text-fill-color: #102747 !important;
+}
+
 @media (max-width: 640px) {
   .portal-profile-layout {
     grid-template-columns: minmax(0, 1fr);
