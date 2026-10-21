@@ -10,7 +10,17 @@ const jobSchema = new mongoose.Schema({
     college: { type: mongoose.Schema.Types.ObjectId, ref: "College", required: true, index: true },
     minCgpa: { type: Number, default: 0, min: 0, max: 10 },
     allowedBranches: { type: [String], default: [] },
-    deadline: { type: Date, default: null }
+    deadline: { type: Date, default: null },
+    // Optional custom stages in the order used by this particular recruitment process.
+    // An empty list means the portal tracks only the common application status and activity.
+    selectionStages: {
+        type: [{ type: String, trim: true, maxlength: 80 }],
+        default: [],
+        validate: {
+            validator: stages => Array.isArray(stages) && stages.length <= 12,
+            message: "A job can have at most 12 selection stages.",
+        },
+    },
 }, { timestamps: true });
 
 jobSchema.index({ college: 1, createdAt: -1 });

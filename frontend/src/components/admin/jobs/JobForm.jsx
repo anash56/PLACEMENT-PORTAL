@@ -37,8 +37,27 @@ export default function JobForm({ formData, onChange, onSubmit, saving, mode = "
                         <Input label="Application deadline" name="deadline" type="date" value={formData.deadline} onChange={onChange} />
                     </div>
                     <Input label="Allowed branches (comma-separated)" name="allowedBranchesText" type="text" placeholder="e.g. Information Technology, Computer Engineering" value={formData.allowedBranchesText} onChange={onChange} />
+                    <p className="text-xs leading-5 text-slate-500">Leave the branch list empty to allow all branches. Use branch names that match student profiles.</p>
+                </fieldset>
+
+                <div className="h-px bg-slate-100" />
+
+                <fieldset className="space-y-3">
+                    <legend className="mb-2 flex items-center gap-2 text-sm font-extrabold text-slate-800">
+                        <span className="grid h-7 w-7 place-items-center rounded-lg bg-blue-50 text-xs font-extrabold text-[#245e9b]">03</span>
+                        Hiring stages <span className="font-semibold text-slate-400">(optional)</span>
+                    </legend>
+                    <Textarea
+                        label="Selection stages, in order"
+                        name="selectionStagesText"
+                        value={formData.selectionStagesText || ""}
+                        onChange={onChange}
+                        rows={4}
+                        maxLength={1100}
+                        placeholder={"Resume review\nOnline assessment\nTechnical interview\nHR interview"}
+                    />
                     <p className="text-xs leading-5 text-slate-500">
-                        Leave the branch list empty to allow all branches. Use branch names that match student profiles.
+                        Enter one stage per line, in the order used for this job. You can define up to 12 stages. Leave this empty if you only want to track the overall application status. These stages are informational; admins update them when an actual step occurs.
                     </p>
                 </fieldset>
 

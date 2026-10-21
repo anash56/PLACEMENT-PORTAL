@@ -5,6 +5,7 @@ export default function ConfirmationModal({
     open,
     title,
     message,
+    children,
     onCancel,
     onConfirm,
     loading = false,
@@ -14,7 +15,8 @@ export default function ConfirmationModal({
 }) {
     return (
         <Modal open={open} title={title} onClose={() => { if (!loading) onCancel?.(); }}>
-            <p className="m-0 whitespace-pre-line text-sm leading-6 text-slate-600">{message}</p>
+            {message && <p className="m-0 whitespace-pre-line text-sm leading-6 text-slate-600">{message}</p>}
+            {children}
             <div className="portal-modal-actions">
                 <Button variant="secondary" onClick={onCancel} disabled={loading}>
                     {cancelText}

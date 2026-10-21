@@ -1,60 +1,87 @@
-const STEPS = [
-    { label: "Applied", status: "Pending" },
-    { label: "Test", status: "Test Scheduled" },
-    { label: "Interview", status: "Interview Scheduled" },
-    { label: "Shortlisted", status: "Shortlisted" },
-    { label: "Offer", status: "Offered" },
-];
+import ApplicationStatusBadge from "./ApplicationStatusBadge";
 
-const STATUS_INDEX = {
-    Pending: 0,
-    "Test Scheduled": 1,
-    "Interview Scheduled": 2,
-    Shortlisted: 3,
-    Offered: 4,
+const STATUS_LABELS = {
+    Pending: "Under review",
 };
 
-export default function ApplicationProgress({ status }) {
-    if (status === "Rejected") {
-        return (
-            <div className="mt-5 flex items-start gap-3 rounded-xl border border-rose-200 bg-rose-50/70 p-4 text-sm text-rose-900" role="status">
-                <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-white font-extrabold text-rose-700 ring-1 ring-rose-200" aria-hidden="true">!</span>
-                <div>
-                    <p className="font-extrabold">Application update</p>
-                    <p className="mt-1 leading-6 text-rose-800">This application has been marked as rejected. You can continue exploring other eligible opportunities.</p>
-                </div>
-            </div>
-        );
-    }
+function formatDateTime(value) {
+    if (!value) return "Date unavailable";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "Date unavailable";
+    return date.toLocaleString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" });
+}
 
-    const activeIndex = Math.max(0, STATUS_INDEX[status] ?? 0);
+function ActivityItem({ title, note, changedBy, date, tone = "blue" }) {
+    const dotStyle = tone === "green" ? "bg-emerald-600 ring-emerald-100" : tone === "red" ? "bg-rose-600 ring-rose-100" : "bg-[#245e9b] ring-blue-100";
+    return (
+        <li className="relative min-w-0 pl-7 pb-5 last:pb-0">
+            <span className={`absolute left-0 top-1.5 h-3 w-3 rounded-full ring-4 ${dotStyle}`} aria-hidden="true" />
+            <p className="break-words text-sm font-bold text-slate-800">{title}</p>
+            {note && <p className="mt-1 break-words text-sm leading-6 text-slate-600">{note}</p>}
+            <p className="mt-1 break-words text-xs leading-5 text-slate-500">
+                {formatDateTime(date)}{changedBy?.name ? ` · Updated by ${changedBy.name}` : ""}
+            </p>
+        </li>
+    );
+}
+
+/** Displays only status updates and selection steps that have actually been recorded. */
+export default function ApplicationProgress({ application, status: legacyStatus }) {
+    const currentStatus = application?.status || legacyStatus || "Submitted";
+    const hasRecordedStatusHistory = Array.isArray(application?.statusHistory) && application.statusHistory.length > 0;
+    const statusHistory = hasRecordedStatusHistory ? [...application.statusHistory].reverse() : [];
+    const hasSubmissionEntry = statusHistory.some(entry => entry.status === "Submitted");
+    const stageHistory = Array.isArray(application?.stageHistory) ? [...application.stageHistory].reverse() : [];
+    const currentStage = application?.currentStage || "";
+    const statusTitle = item => STATUS_LABELS[item.status] || item.status || "Application update";
 
     return (
-        <section className="mt-5 border-t border-slate-100 pt-5" aria-label="Application progress">
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-                <h3 className="text-sm font-extrabold text-slate-800">Application progress</h3>
-                <p className="text-xs font-semibold text-[#365e85]">Current stage: {STEPS[activeIndex].label}</p>
+        <section className="mt-5 border-t border-slate-100 pt-5" aria-label="Application activity">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                    <h3 className="text-sm font-extrabold text-slate-800">Application activity</h3>
+                    <p className="mt-1 text-xs leading-5 text-slate-500">Submission and updates recorded in the portal.</p>
+                </div>
+                <ApplicationStatusBadge status={currentStatus} />
             </div>
-            <ol className="grid grid-cols-5 gap-1 sm:gap-3">
-                {STEPS.map((step, index) => {
-                    const completed = index < activeIndex;
-                    const active = index === activeIndex;
-                    return (
-                        <li key={step.status} className="min-w-0 text-center">
-                            <div className="flex items-center">
-                                {index > 0 && <span className={`h-0.5 flex-1 ${index <= activeIndex ? "bg-[#7896b7]" : "bg-slate-200"}`} aria-hidden="true" />}
-                                <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-full border text-[10px] font-extrabold sm:h-8 sm:w-8 sm:text-xs ${completed ? "border-[#365e85] bg-[#365e85] text-white" : active ? "border-[#365e85] bg-white text-[#365e85] ring-4 ring-[#365e85]/10" : "border-slate-200 bg-white text-slate-400"}`} aria-current={active ? "step" : undefined}>
-                                    {completed ? "✓" : index + 1}
-                                </span>
-                                {index < STEPS.length - 1 && <span className={`h-0.5 flex-1 ${index < activeIndex ? "bg-[#7896b7]" : "bg-slate-200"}`} aria-hidden="true" />}
-                            </div>
-                            <span className={`mt-2 block break-words text-[9px] font-bold leading-4 sm:text-[11px] ${active ? "text-[#294e75]" : completed ? "text-slate-600" : "text-slate-400"}`}>
-                                {step.label}
-                            </span>
-                        </li>
-                    );
-                })}
-            </ol>
+
+            {hasRecordedStatusHistory && !hasSubmissionEntry && <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50/80 px-3 py-3 text-sm leading-6 text-amber-900">Earlier application activity was not tracked. Entries below show updates recorded from the point history tracking became available.</p>}
+
+            {hasRecordedStatusHistory ? <ol className="mt-5 border-l border-slate-200 pl-0">
+                {statusHistory.map((entry, index) => (
+                    <ActivityItem
+                        key={`status-${entry.changedAt || index}-${index}`}
+                        title={statusTitle(entry)}
+                        note={entry.note || ""}
+                        changedBy={entry.changedBy}
+                        date={entry.changedAt || entry.createdAt || application?.createdAt}
+                        tone={entry.status === "Rejected" ? "red" : entry.status === "Offered" ? "green" : "blue"}
+                    />
+                ))}
+            </ol> : <p className="mt-4 rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-3 text-sm leading-6 text-slate-600">No detailed status history is available for this older application yet. New updates will be recorded here.</p>}
+
+            {(currentStage || stageHistory.length > 0) && (
+                <div className="mt-5 rounded-xl border border-blue-100 bg-blue-50/60 p-4">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div>
+                            <h4 className="text-sm font-extrabold text-[#173e70]">Hiring stage</h4>
+                            <p className="mt-1 text-sm leading-6 text-slate-700">{currentStage || "No active stage assigned"}</p>
+                        </div>
+                        <span className="rounded-full border border-blue-100 bg-white px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-[#245e9b]">Job-specific</span>
+                    </div>
+                    {stageHistory.length > 0 && (
+                        <ol className="mt-4 space-y-3 border-t border-blue-100 pt-3">
+                            {stageHistory.map((entry, index) => (
+                                <li key={`stage-${entry.changedAt || index}-${index}`} className="min-w-0">
+                                    <p className="break-words text-sm font-bold text-slate-800">{entry.stage}</p>
+                                    {entry.note && <p className="mt-0.5 break-words text-sm leading-5 text-slate-600">{entry.note}</p>}
+                                    <p className="mt-1 text-xs leading-5 text-slate-500">{formatDateTime(entry.changedAt)}{entry.changedBy?.name ? ` · Updated by ${entry.changedBy.name}` : ""}</p>
+                                </li>
+                            ))}
+                        </ol>
+                    )}
+                </div>
+            )}
         </section>
     );
 }

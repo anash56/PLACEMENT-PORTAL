@@ -6,6 +6,7 @@ export const EMPTY_JOB_FORM = {
     description: "",
     minCgpa: "",
     allowedBranchesText: "",
+    selectionStagesText: "",
     deadline: "",
 };
 
@@ -24,8 +25,26 @@ export function jobToForm(job = {}) {
         description: job.description ?? "",
         minCgpa: job.minCgpa ?? "",
         allowedBranchesText: Array.isArray(job.allowedBranches) ? job.allowedBranches.join(", ") : "",
+        selectionStagesText: Array.isArray(job.selectionStages) ? job.selectionStages.join("\n") : "",
         deadline,
     };
+}
+
+function parseCommaSeparatedUnique(value, maxLength = 80) {
+    return [...new Set(String(value || "")
+        .split(",")
+        .map(item => item.trim())
+        .filter(Boolean)
+        .map(item => item.slice(0, maxLength)) )];
+}
+
+export function parseSelectionStages(value) {
+    return [...new Set(String(value || "")
+        .split(/[\n,]/)
+        .map(stage => stage.trim())
+        .filter(Boolean)
+        .map(stage => stage.slice(0, 80))
+        .filter((stage, index, all) => all.findIndex(item => item.toLocaleLowerCase() === stage.toLocaleLowerCase()) === index))];
 }
 
 export function validateJobForm(form) {
@@ -45,18 +64,16 @@ export function validateJobForm(form) {
         }
     }
 
+    const stages = String(form.selectionStagesText || "").split(/[\n,]/).map(stage => stage.trim()).filter(Boolean);
+    if (stages.length > 12) return "Add no more than 12 selection stages.";
+    if (stages.some(stage => stage.length > 80)) return "Each selection stage must be 80 characters or fewer.";
+    const uniqueStages = new Set(stages.map(stage => stage.toLocaleLowerCase()));
+    if (uniqueStages.size !== stages.length) return "Remove duplicate selection stages. Each stage should appear once.";
+
     return "";
 }
 
 export function jobFormToPayload(form) {
-    const allowedBranches = [...new Set(
-        form.allowedBranchesText
-            .split(",")
-            .map(branch => branch.trim())
-            .filter(Boolean)
-            .map(branch => branch.slice(0, 80))
-    )];
-
     return {
         title: form.title.trim(),
         company: form.company.trim(),
@@ -64,7 +81,8 @@ export function jobFormToPayload(form) {
         salary: Number(form.salary),
         description: form.description.trim(),
         minCgpa: form.minCgpa === "" ? 0 : Number(form.minCgpa),
-        allowedBranches,
+        allowedBranches: parseCommaSeparatedUnique(form.allowedBranchesText),
+        selectionStages: parseSelectionStages(form.selectionStagesText),
         deadline: form.deadline || null,
     };
 }
