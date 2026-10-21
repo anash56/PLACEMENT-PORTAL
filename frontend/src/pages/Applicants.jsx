@@ -1,661 +1,221 @@
-import {
-    useEffect,
-    useState
-} from "react";
-
-import {
-    useNavigate,
-    useParams
-} from "react-router-dom";
-
-import api from "../services/api";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
-
+import api from "../services/api";
+import PageContainer from "../components/ui/PageContainer";
 import Button from "../components/ui/Button";
 import Card from "../components/ui/Card";
-import PageContainer from "../components/ui/PageContainer";
+import Input from "../components/ui/Input";
+import AdminPageHeader from "../components/admin/AdminPageHeader";
+import ApplicantCard, { APPLICATION_STATUSES } from "../components/admin/applicants/ApplicantCard";
 
+const STATUS_OPTIONS = ["All statuses", ...APPLICATION_STATUSES];
 
-function Applicants() {
+function csvCell(value) {
+    let text = String(value ?? "");
+    // Prevent spreadsheet programs from evaluating untrusted cells as formulas.
+    if (/^[\s\u0000-\u001f]*[=+\-@]/.test(text)) text = `'${text}`;
+    return `"${text.replace(/"/g, '""')}"`;
+}
 
+function countApplications(applicants, status) {
+    return applicants.filter(application => application.status === status).length;
+}
+
+function MetricCard({ label, value, description, tone = "slate" }) {
+    const valueClass = tone === "green" ? "text-emerald-800" : tone === "amber" ? "text-amber-800" : "text-slate-900";
+    return (
+        <Card className="!p-4 sm:!p-5">
+            <p className="text-xs font-bold text-slate-500">{label}</p>
+            <p className={`mt-2 text-2xl font-extrabold tracking-tight ${valueClass}`}>{value.toLocaleString("en-IN")}</p>
+            <p className="mt-1 text-xs leading-5 text-slate-500">{description}</p>
+        </Card>
+    );
+}
+
+export default function Applicants() {
     const { jobId } = useParams();
-
     const navigate = useNavigate();
-
-
     const [applicants, setApplicants] = useState([]);
-
+    const [job, setJob] = useState(null);
     const [loading, setLoading] = useState(true);
-
     const [error, setError] = useState("");
+    const [updatingApplicationId, setUpdatingApplicationId] = useState(null);
+    const [search, setSearch] = useState("");
+    const [statusFilter, setStatusFilter] = useState("All statuses");
 
-    const [
-        updatingApplicationId,
-        setUpdatingApplicationId
-    ] = useState(null);
-
-
-    useEffect(() => {
-
-        fetchApplicants();
-
+    const fetchApplicants = useCallback(async () => {
+        try {
+            setLoading(true);
+            setError("");
+            const [applicationsResponse, jobResponse] = await Promise.all([
+                api.get(`/applications/job/${jobId}`),
+                api.get(`/jobs/${jobId}`),
+            ]);
+            const applicationData = applicationsResponse.data;
+            setApplicants(Array.isArray(applicationData) ? applicationData : Array.isArray(applicationData.applications) ? applicationData.applications : []);
+            setJob(jobResponse.data.job || jobResponse.data || null);
+        } catch (requestError) {
+            setError(requestError.response?.data?.message || "Could not load the applicants for this job.");
+        } finally {
+            setLoading(false);
+        }
     }, [jobId]);
 
+    useEffect(() => {
+        fetchApplicants();
+    }, [fetchApplicants]);
 
-    const fetchApplicants = async () => {
+    const visibleApplicants = useMemo(() => {
+        const normalizedQuery = search.trim().toLocaleLowerCase();
+        return applicants.filter(application => {
+            const student = application.student || {};
+            const matchesStatus = statusFilter === "All statuses" || application.status === statusFilter;
+            const searchableText = [student.name, student.email, student.branch, student.graduationYear, ...(Array.isArray(student.skills) ? student.skills : [])]
+                .filter(Boolean)
+                .join(" ")
+                .toLocaleLowerCase();
+            return matchesStatus && (!normalizedQuery || searchableText.includes(normalizedQuery));
+        });
+    }, [applicants, search, statusFilter]);
+
+    const updateStatus = async (applicationId, status) => {
+        const currentApplication = applicants.find(application => application._id === applicationId);
+        if (!currentApplication || currentApplication.status === status) return;
 
         try {
-
-            setLoading(true);
-
-            setError("");
-
-
-            const res = await api.get(
-
-                `/applications/job/${jobId}`
-
-            );
-
-
-            setApplicants(res.data);
-
+            setUpdatingApplicationId(applicationId);
+            await api.patch(`/applications/${applicationId}`, { status });
+            setApplicants(current => current.map(application => application._id === applicationId ? { ...application, status } : application));
+            toast.success("Application status updated.");
+        } catch (requestError) {
+            toast.error(requestError.response?.data?.message || "Could not update the application status.");
+        } finally {
+            setUpdatingApplicationId(null);
         }
-
-        catch (error) {
-
-            console.log(
-                error.response?.data
-            );
-
-
-            setError(
-
-                error.response?.data?.message
-
-                ||
-
-                "Failed to load applicants."
-
-            );
-
-        }
-
-        finally {
-
-            setLoading(false);
-
-        }
-
     };
 
-    const downloadCSV = () => {
-        if (!applicants || applicants.length === 0) {
-            toast.error("No applicants to export.");
+    const exportVisibleApplicants = () => {
+        if (visibleApplicants.length === 0) {
+            toast.error("There are no visible applicants to export.");
             return;
         }
 
-        // CSV Headers
-        const headers = [
-            "Student Name",
-            "Student Email",
-            "Branch",
-            "CGPA",
-            "Graduation Year",
-            "Contact Number",
-            "Skills",
-            "Application Status",
-            "Applied Date"
-        ];
-
-        // Format rows
-        const rows = applicants.map((app) => {
-            const student = app.student || {};
-            const skillsStr = student.skills ? student.skills.join("; ") : "";
-            const appliedDate = app.createdAt ? new Date(app.createdAt).toLocaleDateString() : "";
-            
+        const headers = ["Student Name", "Student Email", "Branch", "CGPA", "Graduation Year", "Contact Number", "Skills", "Application Status", "Applied Date"];
+        const rows = visibleApplicants.map(application => {
+            const student = application.student || {};
+            const date = new Date(application.createdAt);
+            const appliedDate = application.createdAt && !Number.isNaN(date.getTime()) ? date.toISOString().slice(0, 10) : "";
             return [
                 student.name || "Unknown Student",
                 student.email || "",
                 student.branch || "Unspecified",
-                student.cgpa !== undefined ? student.cgpa : "",
+                student.cgpa ?? "",
                 student.graduationYear || "",
                 student.contactNumber || "",
-                skillsStr,
-                app.status,
-                appliedDate
+                Array.isArray(student.skills) ? student.skills.join("; ") : "",
+                application.status || "Unknown",
+                appliedDate,
             ];
         });
 
-        // Combine into CSV string (escape commas and double quotes)
-        const csvContent = [
-            headers.join(","),
-            ...rows.map((row) => 
-                row.map((field) => {
-                    const escapedField = String(field).replace(/"/g, '""');
-                    return `"${escapedField}"`;
-                }).join(",")
-            )
-        ].join("\n");
-
-        // Create download link and trigger click
-        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-        const url = URL.createObjectURL(blob);
+        const csv = "\uFEFF" + [headers, ...rows].map(row => row.map(csvCell).join(",")).join("\r\n");
+        const objectUrl = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" }));
         const link = document.createElement("a");
-        link.setAttribute("href", url);
-        link.setAttribute("download", `Applicants_Job_${jobId}.csv`);
-        link.style.visibility = "hidden";
+        link.href = objectUrl;
+        link.download = `applicants-${jobId}-${new Date().toISOString().slice(0, 10)}.csv`;
+        link.style.display = "none";
         document.body.appendChild(link);
         link.click();
-        document.body.removeChild(link);
+        link.remove();
+        window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+        toast.success(`Exported ${visibleApplicants.length} applicant${visibleApplicants.length === 1 ? "" : "s"}.`);
     };
 
-
-    const updateStatus = async (
-        applicationId,
-        status
-    ) => {
-
-        try {
-
-            setUpdatingApplicationId(
-                applicationId
-            );
-
-
-            await api.patch(
-
-                `/applications/${applicationId}`,
-
-                {
-                    status
-                }
-
-            );
-
-
-            setApplicants(
-                (previousApplicants) =>
-
-                    previousApplicants.map(
-                        (application) =>
-
-                            application._id
-                                === applicationId
-
-                                ?
-
-                                {
-                                    ...application,
-                                    status
-                                }
-
-                                :
-
-                                application
-                    )
-            );
-
-            toast.success("Application Status Updated");
-
-        }
-
-        catch (error) {
-
-            console.log(
-                error.response?.data
-            );
-
-
-            toast.error(
-
-                error.response?.data?.message
-
-                ||
-
-                "Status Update Failed"
-
-            );
-
-        }
-
-        finally {
-
-            setUpdatingApplicationId(null);
-
-        }
-
-    };
-
+    const pendingCount = countApplications(applicants, "Pending");
+    const shortlistedCount = countApplications(applicants, "Shortlisted");
+    const offeredCount = countApplications(applicants, "Offered");
+    const filterIsActive = search.trim() || statusFilter !== "All statuses";
 
     return (
-
         <PageContainer>
+            <AdminPageHeader
+                title="Applicants"
+                description={job?.title ? `Review candidates for ${job.title}${job.company ? ` at ${job.company}` : ""}.` : "Review candidate profiles and keep application statuses up to date."}
+                actions={
+                    <>
+                        <Button onClick={exportVisibleApplicants} disabled={loading || visibleApplicants.length === 0}>Export CSV</Button>
+                        <Button variant="secondary" onClick={() => navigate("/admin/jobs")}>Back to jobs</Button>
+                    </>
+                }
+            />
 
-            <div
-                className="
-                    mb-8
-                    flex
-                    flex-col
-                    gap-4
-                    sm:flex-row
-                    sm:items-center
-                    sm:justify-between
-                "
-            >
-
-                <div>
-
-                    <h1 className="text-3xl font-bold text-gray-900">
-
-                        Applicants
-
-                    </h1>
-
-
-                    <p className="mt-2 text-sm text-gray-500">
-
-                        Review applicants and update their application status.
-
-                    </p>
-
+            {loading ? (
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-busy="true" aria-label="Loading applicant summary">
+                    {[1, 2, 3, 4].map(item => <Card key={item} className="!p-5"><div className="animate-pulse space-y-3"><div className="h-3 w-2/5 rounded bg-slate-100" /><div className="h-7 w-1/3 rounded bg-slate-100" /><div className="h-3 w-3/4 rounded bg-slate-50" /></div></Card>)}
                 </div>
-
-
-                <div className="flex gap-2">
-                    {applicants.length > 0 && (
-                        <Button
-                            onClick={downloadCSV}
-                            className="bg-green-600 hover:bg-green-700 text-white"
-                        >
-                            Export to CSV
-                        </Button>
-                    )}
-                    <Button
-                        variant="secondary"
-                        onClick={() =>
-                            navigate("/admin/jobs")
-                        }
-                    >
-
-                        Back to Jobs
-
-                    </Button>
-                </div>
-
-            </div>
-
-
-            {
-                loading
-
-                    ?
-
-                    <div className="space-y-4">
-                        {[1, 2].map((n) => (
-                            <Card key={n} className="animate-pulse">
-                                <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-                                    <div className="flex-1 space-y-3">
-                                        <div className="h-5 bg-gray-200 rounded w-1/4"></div>
-                                        <div className="h-4 bg-gray-200 rounded w-1/3"></div>
-                                        <div className="flex gap-4 mt-2">
-                                            <div className="h-4 bg-gray-100 rounded w-20"></div>
-                                            <div className="h-4 bg-gray-100 rounded w-20"></div>
-                                        </div>
-                                    </div>
-                                    <div className="h-10 bg-gray-200 rounded w-full sm:w-56"></div>
-                                </div>
-                            </Card>
-                        ))}
+            ) : error ? (
+                <Card className="!p-6 sm:!p-8">
+                    <div className="mx-auto max-w-lg py-4 text-center">
+                        <h2 className="text-lg font-extrabold text-slate-900">Unable to load applicants</h2>
+                        <p className="mt-2 text-sm leading-6 text-slate-600">{error}</p>
+                        <div className="mt-5 flex justify-center gap-2"><Button variant="secondary" onClick={() => navigate("/admin/jobs")}>Back to jobs</Button><Button onClick={fetchApplicants}>Try again</Button></div>
                     </div>
+                </Card>
+            ) : (
+                <>
+                    <section className="mb-7 grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Applicant status summary">
+                        <MetricCard label="Total applicants" value={applicants.length} description="Applications received for this job" />
+                        <MetricCard label="Pending review" value={pendingCount} description="Waiting for a status update" tone="amber" />
+                        <MetricCard label="Shortlisted" value={shortlistedCount} description="Candidates moved forward" tone="green" />
+                        <MetricCard label="Offers recorded" value={offeredCount} description="Applications marked Offered" tone="green" />
+                    </section>
 
-
-                    :
-
-                    error
-
-                        ?
-
-                        <Card>
-
-                            <div className="py-6 text-center">
-
-                                <h2 className="text-lg font-semibold text-gray-900">
-
-                                    Unable to Load Applicants
-
-                                </h2>
-
-
-                                <p className="mt-2 text-sm text-gray-500">
-
-                                    {error}
-
-                                </p>
-
-
-                                <div className="mt-4">
-
-                                    <Button
-                                        onClick={fetchApplicants}
-                                    >
-
-                                        Try Again
-
-                                    </Button>
-
-                                </div>
-
+                    <Card className="mb-6 !p-4 sm:!p-5">
+                        <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_240px] md:items-end">
+                            <Input label="Search applicants" type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder="Name, email, branch, graduation year, or skill" />
+                            <div className="w-full">
+                                <label htmlFor="applicant-status-filter" className="mb-2 block text-sm font-semibold text-slate-700">Application status</label>
+                                <select id="applicant-status-filter" value={statusFilter} onChange={event => setStatusFilter(event.target.value)} className="min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700">
+                                    {STATUS_OPTIONS.map(status => <option key={status} value={status}>{status}</option>)}
+                                </select>
                             </div>
+                        </div>
+                        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3">
+                            <p className="text-xs font-medium text-slate-500">Showing {visibleApplicants.length} of {applicants.length} applicant{applicants.length === 1 ? "" : "s"}{filterIsActive ? " after filters" : ""}</p>
+                            {filterIsActive && <Button variant="secondary" onClick={() => { setSearch(""); setStatusFilter("All statuses"); }}>Clear filters</Button>}
+                        </div>
+                    </Card>
 
+                    {applicants.length === 0 ? (
+                        <Card className="!p-7 sm:!p-10">
+                            <div className="mx-auto max-w-lg py-4 text-center">
+                                <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl border border-slate-200 bg-slate-50 text-[#365e85]" aria-hidden="true">◎</div>
+                                <h2 className="mt-4 text-lg font-extrabold text-slate-900">No applicants yet</h2>
+                                <p className="mt-2 text-sm leading-6 text-slate-600">Applications will appear here when eligible students apply to this role.</p>
+                                <Button variant="secondary" className="mt-5" onClick={() => navigate("/admin/jobs")}>Return to jobs</Button>
+                            </div>
                         </Card>
-
-
-                        :
-
-                        applicants.length === 0
-
-                            ?
-
-                            <Card>
-
-                                <div className="py-8 text-center">
-
-                                    <h2 className="text-lg font-semibold text-gray-900">
-
-                                        No Applicants Yet
-
-                                    </h2>
-
-
-                                    <p className="mt-2 text-sm text-gray-500">
-
-                                        No students have applied for this job.
-
-                                    </p>
-
-                                </div>
-
-                            </Card>
-
-
-                            :
-
-                            <div className="space-y-4">
-
-                                {
-
-                                    applicants.map(
-                                        (application) => {
-
-                                            const isUpdating =
-
-                                                updatingApplicationId
-                                                === application._id;
-
-
-                                            return (
-
-                                                <Card
-                                                    key={application._id}
-                                                >
-
-                                                    <div
-                                                        className="
-                                                            flex
-                                                            flex-col
-                                                            gap-5
-                                                            sm:flex-row
-                                                            sm:items-center
-                                                            sm:justify-between
-                                                        "
-                                                    >
-
-                                                         <div className="min-w-0 flex-1">
-
-                                                             <h2 className="text-lg font-semibold text-gray-900">
-
-                                                                 {
-
-                                                                     application
-
-                                                                         .student
-
-                                                                         ?.name
-
-                                                                     ||
-
-                                                                     "Unknown Student"
-
-                                                                 }
-
-                                                             </h2>
-
-
-                                                             <p className="mt-0.5 text-sm text-gray-500">
-
-                                                                 {
-
-                                                                     application
-
-                                                                         .student
-
-                                                                         ?.email
-
-                                                                     ||
-
-                                                                     "Email unavailable"
-
-                                                                 }
-
-                                                             </p>
-
-
-                                                             {/* Student Profile Snapshot */}
-                                                             {application.student?.cgpa !== undefined && application.student?.branch && (
-                                                                 <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600">
-                                                                     <p>
-                                                                         <span className="font-semibold text-gray-900">Branch:</span>{" "}
-                                                                         {application.student.branch}
-                                                                     </p>
-                                                                     <p>
-                                                                         <span className="font-semibold text-gray-900">CGPA:</span>{" "}
-                                                                         {application.student.cgpa} / 10.0
-                                                                     </p>
-                                                                     {application.student.graduationYear && (
-                                                                         <p>
-                                                                             <span className="font-semibold text-gray-900">Batch:</span>{" "}
-                                                                             {application.student.graduationYear}
-                                                                         </p>
-                                                                     )}
-                                                                 </div>
-                                                             )}
-
-                                                             {application.student?.contactNumber && (
-                                                                 <p className="mt-1 text-sm text-gray-600">
-                                                                     <span className="font-semibold text-gray-900">Phone:</span>{" "}
-                                                                     {application.student.contactNumber}
-                                                                 </p>
-                                                             )}
-
-                                                             {/* Skills tags */}
-                                                             {application.student?.skills && application.student.skills.length > 0 && (
-                                                                 <div className="mt-2.5 flex flex-wrap gap-1">
-                                                                     {application.student.skills.map((skill, index) => (
-                                                                         <span
-                                                                             key={index}
-                                                                             className="inline-flex items-center rounded-md bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10"
-                                                                         >
-                                                                             {skill}
-                                                                         </span>
-                                                                     ))}
-                                                                 </div>
-                                                             )}
-
-                                                             {/* Resume Link */}
-                                                             <div className="mt-4">
-                                                                 {application.student?.resumeUrl ? (
-                                                                     <a
-                                                                         href={application.student.resumeUrl}
-                                                                         target="_blank"
-                                                                         rel="noopener noreferrer"
-                                                                         className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 transition"
-                                                                     >
-                                                                         <svg className="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                                                         </svg>
-                                                                         View PDF Resume
-                                                                     </a>
-                                                                 ) : (
-                                                                     <span className="inline-flex items-center gap-1 rounded bg-yellow-50 px-2 py-1 text-xs font-medium text-yellow-800 border border-yellow-100">
-                                                                         No resume uploaded
-                                                                     </span>
-                                                                 )}
-                                                             </div>
-
-                                                         </div>
-
-
-                                                        <div className="w-full sm:w-56">
-
-                                                            <label
-                                                                htmlFor={
-                                                                    `status-${application._id}`
-                                                                }
-                                                                className="
-                                                                    mb-2
-                                                                    block
-                                                                    text-sm
-                                                                    font-medium
-                                                                    text-gray-700
-                                                                "
-                                                            >
-
-                                                                Application Status
-
-                                                            </label>
-
-
-                                                            <select
-                                                                id={
-                                                                    `status-${application._id}`
-                                                                }
-                                                                value={
-                                                                    application.status
-                                                                }
-                                                                disabled={
-                                                                    isUpdating
-                                                                }
-                                                                onChange={(e) =>
-
-                                                                    updateStatus(
-
-                                                                        application._id,
-
-                                                                        e.target.value
-
-                                                                    )
-
-                                                                }
-                                                                className="
-                                                                    w-full
-                                                                    rounded-lg
-                                                                    border
-                                                                    border-gray-300
-                                                                    bg-white
-                                                                    px-3
-                                                                    py-2
-                                                                    text-sm
-                                                                    outline-none
-                                                                    transition
-                                                                    focus:border-blue-500
-                                                                    focus:ring-2
-                                                                    focus:ring-blue-200
-                                                                    disabled:cursor-not-allowed
-                                                                    disabled:opacity-60
-                                                                "
-                                                            >
-
-                                                                <option value="Pending">
-
-                                                                    Pending
-
-                                                                </option>
-
-
-                                                                <option value="Test Scheduled">
-
-                                                                    Test Scheduled
-
-                                                                </option>
-
-
-                                                                <option value="Interview Scheduled">
-
-                                                                    Interview Scheduled
-
-                                                                </option>
-
-
-                                                                <option value="Shortlisted">
-
-                                                                    Shortlisted
-
-                                                                </option>
-
-
-                                                                <option value="Offered">
-
-                                                                    Offered
-
-                                                                </option>
-
-
-                                                                <option value="Rejected">
-
-                                                                    Rejected
-
-                                                                </option>
-
-                                                            </select>
-
-
-                                                            {
-                                                                isUpdating
-                                                                &&
-                                                                (
-
-                                                                    <p className="mt-2 text-xs text-gray-500">
-
-                                                                        Updating status...
-
-                                                                    </p>
-
-                                                                )
-                                                            }
-
-                                                        </div>
-
-                                                    </div>
-
-                                                </Card>
-
-                                            );
-
-                                        }
-                                    )
-
-                                }
-
-                            </div>
-
-            }
-
+                    ) : visibleApplicants.length === 0 ? (
+                        <Card className="!p-7 text-center">
+                            <h2 className="text-lg font-extrabold text-slate-900">No applicants match these filters</h2>
+                            <p className="mt-2 text-sm text-slate-600">Clear the filters or try a different search term.</p>
+                            <Button variant="secondary" className="mt-4" onClick={() => { setSearch(""); setStatusFilter("All statuses"); }}>Clear filters</Button>
+                        </Card>
+                    ) : (
+                        <div className="space-y-4">
+                            {visibleApplicants.map(application => (
+                                <ApplicantCard
+                                    key={application._id}
+                                    application={application}
+                                    updating={updatingApplicationId === application._id}
+                                    onStatusChange={updateStatus}
+                                />
+                            ))}
+                        </div>
+                    )}
+                </>
+            )}
         </PageContainer>
-
     );
-
 }
-
-
-export default Applicants;
