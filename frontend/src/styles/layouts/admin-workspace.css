@@ -254,3 +254,77 @@
     transition: none !important;
   }
 }
+/* Admin UI polish: action hierarchy, matching sign-out control, and analytics surfaces. */
+.portal-admin-scroll .portal-page .portal-admin-job-actions .admin-job-action {
+  min-height: 44px;
+  justify-content: center;
+  border-radius: .85rem !important;
+  font-weight: 750;
+  line-height: 1.25;
+}
+
+.portal-admin-scroll .portal-page .portal-admin-job-actions .admin-job-action-primary {
+  box-shadow: 0 5px 14px rgb(23 79 151 / 16%) !important;
+}
+
+.portal-admin-scroll .portal-page .portal-admin-job-actions .admin-job-action-primary:hover:not(:disabled) {
+  box-shadow: 0 8px 18px rgb(23 79 151 / 22%) !important;
+  transform: translateY(-1px);
+}
+
+/* This soft outlined treatment matches the account sign-out control used elsewhere. */
+button.portal-admin-signout {
+  display: flex;
+  width: 100%;
+  min-height: 3.5rem !important;
+  align-items: center;
+  gap: .75rem;
+  border: 1px solid #d8e4f3 !important;
+  border-radius: .95rem !important;
+  padding: .85rem 1rem !important;
+  color: #294867 !important;
+  background: #f4f8fe !important;
+  text-align: left;
+  font-size: .95rem;
+  font-weight: 650;
+  box-shadow: none !important;
+  transition: border-color .18s ease, background-color .18s ease, color .18s ease;
+}
+
+button.portal-admin-signout:hover:not(:disabled) {
+  border-color: #b9cfea !important;
+  color: #1f456f !important;
+  background: #eaf2fd !important;
+}
+
+button.portal-admin-signout:focus-visible {
+  outline: 3px solid rgb(36 94 155 / 28%);
+  outline-offset: 3px;
+}
+
+button.portal-admin-signout svg {
+  flex: 0 0 auto;
+  color: #365e85;
+}
+
+/* Placement Analytics remains the design reference: white panels, quiet blue border,
+   readable navy headings, and restrained shadows on the pale workspace canvas. */
+.portal-admin-scroll .portal-placement-analytics .portal-analytics-card {
+  border: 1px solid #d6e4f6 !important;
+  border-radius: 1.15rem !important;
+  background: #ffffff !important;
+  box-shadow: 0 6px 22px rgb(16 43 83 / 5%) !important;
+}
+
+.portal-admin-scroll .portal-placement-analytics .portal-analytics-card:hover {
+  border-color: #c8d9ef !important;
+  box-shadow: 0 10px 26px rgb(16 43 83 / 8%) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .portal-admin-scroll .portal-page .portal-admin-job-actions .admin-job-action,
+  button.portal-admin-signout {
+    transition: none !important;
+    transform: none !important;
+  }
+}

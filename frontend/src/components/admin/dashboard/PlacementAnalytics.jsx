@@ -14,7 +14,7 @@ function ApplicationStatusDistribution({ totalApplications, statusBreakdown }) {
     const omittedCount = rankedEntries.slice(8).reduce((sum, [, count]) => sum + Number(count || 0), 0);
     if (rankedEntries.length > 8) entries.push([`Other statuses (${rankedEntries.length - 8})`, omittedCount]);
     return (
-        <Card className="!rounded-2xl">
+        <Card className="portal-analytics-card !rounded-2xl">
             <h3 className="mb-2 border-b border-slate-100 pb-3 text-lg font-bold text-slate-900">Applications by current status</h3>
             <p className="mb-5 text-xs leading-5 text-slate-600">Each job can have its own stages. This summary groups applications by their current recorded stage or final outcome.</p>
             {entries.length > 0 ? (
@@ -47,7 +47,7 @@ function ApplicationStatusDistribution({ totalApplications, statusBreakdown }) {
 function BranchDistribution({ branches }) {
     const orderedBranches = [...(branches || [])].sort((a, b) => Number(b.value || 0) - Number(a.value || 0));
     return (
-        <Card className="!rounded-2xl">
+        <Card className="portal-analytics-card !rounded-2xl">
             <h3 className="mb-5 border-b border-slate-100 pb-3 text-lg font-bold text-slate-900">Branch distribution</h3>
             {orderedBranches.length > 0 ? (
                 <div className="max-h-56 space-y-3 overflow-y-auto">
@@ -83,7 +83,7 @@ function SalaryStatistics({ totalJobs, offeredApplications, salaryStats, placedS
         },
     ];
     return (
-        <Card className="!rounded-2xl">
+        <Card className="portal-analytics-card !rounded-2xl">
             <h3 className="mb-5 border-b border-slate-100 pb-3 text-lg font-bold text-slate-900">Salary statistics</h3>
             <div className="space-y-5">
                 {groups.map(group => (
@@ -118,7 +118,7 @@ export default function PlacementAnalytics({
     offeredApplications,
 }) {
     return (
-        <section className="mt-8" aria-labelledby="placement-analytics-heading">
+        <section className="portal-placement-analytics mt-8" aria-labelledby="placement-analytics-heading">
             <div className="mb-4">
                 <h2 id="placement-analytics-heading" className="text-xl font-extrabold text-slate-900">Placement analytics</h2>
                 <p className="mt-1 text-sm text-slate-600">Current application states, student distribution, and salary outcomes.</p>

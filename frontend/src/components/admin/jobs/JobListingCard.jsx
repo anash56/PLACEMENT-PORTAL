@@ -49,11 +49,11 @@ export default function JobListingCard({ job, onViewApplicants, onEdit, onDelete
                     <p className="mt-4 text-xs text-slate-500">Posted {job.createdAt ? formatDate(job.createdAt) : "date unavailable"}</p>
                 </div>
 
-                <div className="grid w-full min-w-0 shrink-0 grid-cols-1 gap-2 sm:grid-cols-3 lg:w-40 lg:grid-cols-1">
-                    <Button variant="secondary" onClick={() => onViewApplicants(job._id)} className="w-full">View applicants</Button>
-                    <Button variant="secondary" onClick={() => onEdit(job._id)} className="w-full">Edit job</Button>
-                    {/* Keep the list action neutral; the confirmation dialog still marks deletion as destructive. */}
-                    <Button variant="secondary" onClick={() => onDelete(job)} className="w-full">Delete job</Button>
+                <div className="portal-admin-job-actions grid w-full min-w-0 shrink-0 grid-cols-1 gap-2 sm:grid-cols-3 lg:w-40 lg:grid-cols-1">
+                    <Button variant="primary" onClick={() => onViewApplicants(job._id)} className="admin-job-action admin-job-action-primary w-full">View applicants</Button>
+                    <Button variant="secondary" onClick={() => onEdit(job._id)} className="admin-job-action w-full">Edit job</Button>
+                    {/* Use a distinct destructive style for deletion; the confirmation dialog remains in place. */}
+                    <Button variant="danger" onClick={() => onDelete(job)} className="admin-job-action w-full">Delete job</Button>
                 </div>
             </div>
         </Card>

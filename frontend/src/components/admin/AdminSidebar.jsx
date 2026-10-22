@@ -49,7 +49,7 @@ export default function AdminSidebar({ sidebarOpen, closeSidebar }) {
                 <button
                     type="button"
                     onClick={() => setLogoutOpen(true)}
-                    className="flex min-h-11 w-full items-center gap-2 rounded-xl border border-[#d8e4f3] bg-[#f4f8fe] px-4 py-3 text-left text-sm font-semibold text-[#294867] transition hover:border-[#b9cfea] hover:bg-[#eaf2fd] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#245e9b]"
+                    className="portal-admin-signout"
                 >
                     <svg aria-hidden="true" className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M10 17l5-5-5-5M15 12H3"/><path d="M12 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6"/></svg>
                     Sign out
