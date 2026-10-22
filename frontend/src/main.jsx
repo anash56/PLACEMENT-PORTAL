@@ -1,14 +1,13 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { Toaster } from "react-hot-toast";
-import "./index.css";
-import "./landing.css";
-import "./workspace-polish.css";
+import "./styles/global.css";
+import "./styles/pages/landing.css";
+import "./styles/workspace-shared.css";
 // Load the shared site-wide styles once, in a deliberate order, before rendering the app.
-import "./components/ui/portal-consistency.css";
-import "./components/ui/contrast-safety.css";
-import "./workflow-contrast.css";
-import "./design-system-overrides.css";
+import "./styles/components/shared-ui.css";
+import "./styles/contrast/contrast-safety.css";
+import "./styles/design-system/overrides.css";
 import App from "./App.jsx";
 import { AuthProvider } from "./context/AuthContext.jsx";
 

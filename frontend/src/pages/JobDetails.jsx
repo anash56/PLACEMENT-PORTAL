@@ -7,7 +7,7 @@ import PageContainer from "../components/ui/PageContainer";
 import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
 import ConfirmationModal from "../components/ui/ConfirmationModal";
-import "../components/ui/profile-job-detail.css";
+import "../styles/pages/profile-jobs.css";
 
 const Icon = ({ type, className = "h-5 w-5" }) => {
   const paths = {

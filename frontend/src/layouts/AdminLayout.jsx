@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Outlet } from "react-router-dom";
 
 import AdminSidebar from "../components/admin/AdminSidebar";
-import "./admin-workspace.css";
+import "../styles/layouts/admin-workspace.css";
 
 export default function AdminLayout() {
     const [sidebarOpen, setSidebarOpen] = useState(false);

@@ -1,5 +1,5 @@
 /* Placement Portal: shared contrast, navigation, controls, and dialog system.
-   Imported by Modal.jsx so these rules load globally without changing main.jsx. */
+   Loaded from main.jsx after the workspace styles; keep this position in the global cascade. */
 
 :root {
   --portal-navy: #071b3b;

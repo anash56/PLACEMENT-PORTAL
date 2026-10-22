@@ -1,0 +1,64 @@
+/* Global contrast safety net. Older global CSS made every heading inside any
+   gradient white, which made headings disappear on pale callout panels. Default
+   gradient headings to readable navy, and opt back into white only for the
+   portal's known dark navy gradient. This file loads after workspace-shared.css
+   through Modal.jsx on every app route. */
+.portal-page.portal-page [class*="linear-gradient"] :is(h1, h2, h3),
+.portal-page.portal-page [data-surface="light-gradient"] :is(h1, h2, h3) {
+  color: #102747 !important;
+  -webkit-text-fill-color: #102747 !important;
+}
+
+.portal-page.portal-page [class*="linear-gradient"][class*="#071b3b"] :is(h1, h2, h3),
+.portal-page.portal-page [class*="linear-gradient"][class*="#0b2e61"] :is(h1, h2, h3) {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+/* Explicit guard for the job submission confirmation / next-step panel. */
+.portal-page #application-action-title {
+  color: #102747 !important;
+  -webkit-text-fill-color: #102747 !important;
+}
+
+/* Keep explanatory copy legible inside explicitly light gradient callouts. */
+.portal-page.portal-page [data-surface="light-gradient"] :is(p, li, dd) {
+  color: #405773;
+}
+
+/* Workflow contrast rules follow the general contrast safety rules, preserving the old import order. */
+/* Global contrast safeguard: dark navy gradients get white headings; light gradient
+   callouts get navy headings. This intentionally overrides the older broad selector
+   that treated every gradient as a dark background. */
+.portal-page [class*="linear-gradient"]:not([class*="#071b3b"]) :is(h1, h2, h3) {
+    color: #102747 !important;
+    -webkit-text-fill-color: #102747 !important;
+}
+
+.portal-page [class*="linear-gradient"][class*="#071b3b"] :is(h1, h2, h3),
+.portal-page [class*="#071b3b"] :is(h1, h2, h3) {
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+}
+
+/* Keep controls and cards within viewport widths on small screens. */
+.portal-page,
+.portal-page-content,
+.portal-page article,
+.portal-page section,
+.portal-page aside {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.portal-page :is(h1, h2, h3, p, span, a, button) {
+    overflow-wrap: anywhere;
+}
+
+.portal-page button:focus-visible,
+.portal-page a:focus-visible,
+.portal-page select:focus-visible,
+.portal-page textarea:focus-visible {
+    outline: 3px solid #75a8ee;
+    outline-offset: 2px;
+}

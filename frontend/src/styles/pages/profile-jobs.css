@@ -1,17 +1,6 @@
-/* Shared finishing rules for the student profile and job discovery/details pages. */
-html,
-body,
-#root {
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
-}
+@import "../base/page-boundaries.css";
 
-html,
-body {
-  overflow-x: clip;
-}
-
+/* Profile and job-page finishing rules. Keep route-specific safeguards scoped below. */
 .portal-page {
   width: 100%;
   max-width: 100%;

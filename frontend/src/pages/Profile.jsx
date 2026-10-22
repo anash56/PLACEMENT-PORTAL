@@ -8,7 +8,7 @@ import ProfileSummaryCard from "../components/student/profile/ProfileSummaryCard
 import ProfileEditForm from "../components/student/profile/ProfileEditForm";
 import CollegeVerificationCard from "../components/student/profile/CollegeVerificationCard";
 import { isAllowedProfileFile, readFileAsDataUri } from "../utils/profileFiles";
-import "../components/ui/profile-job-detail.css";
+import "../styles/pages/profile-jobs.css";
 
 const EMPTY_PROFILE = {
   name: "",

@@ -1,0 +1,14 @@
+/* Global viewport width and horizontal-overflow boundaries used by profile/job routes. */
+html,
+body,
+#root {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+html,
+body {
+  overflow-x: clip;
+}
+

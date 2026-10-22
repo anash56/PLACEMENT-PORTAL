@@ -5,7 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import PageContainer from "../components/ui/PageContainer";
 import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
-import "../components/ui/profile-job-detail.css";
+import "../styles/pages/profile-jobs.css";
 
 const Icon = ({ type, className = "h-5 w-5" }) => {
   const paths = {
