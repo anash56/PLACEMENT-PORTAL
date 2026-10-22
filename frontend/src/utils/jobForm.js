@@ -12,6 +12,14 @@ export const EMPTY_JOB_FORM = {
 
 const RESERVED_WORKFLOW_STAGES = new Set(["submitted", "selected", "rejected", "withdrawn", "offered"]);
 
+function readStageEntries(value) {
+    const text = String(value || "");
+    // The structured editor writes one stage per line; retain support for the older
+    // comma-separated format only when there are no line breaks.
+    const separator = /\r?\n/.test(text) ? /\r?\n/ : ",";
+    return text.split(separator).map(stage => stage.trim()).filter(Boolean);
+}
+
 export function jobToForm(job = {}) {
     let deadline = "";
     if (job.deadline) {
@@ -40,10 +48,7 @@ function parseCommaSeparatedUnique(value, maxLength = 80) {
 }
 
 export function parseSelectionStages(value) {
-    return [...new Set(String(value || "")
-        .split(/[\n,]/)
-        .map(stage => stage.trim())
-        .filter(Boolean)
+    return [...new Set(readStageEntries(value)
         .map(stage => stage.slice(0, 80))
         .filter((stage, index, all) => all.findIndex(item => item.toLocaleLowerCase() === stage.toLocaleLowerCase()) === index))];
 }
@@ -63,7 +68,7 @@ export function validateJobForm(form) {
         }
     }
 
-    const stages = String(form.selectionStagesText || "").split(/[\n,]/).map(stage => stage.trim()).filter(Boolean);
+    const stages = readStageEntries(form.selectionStagesText);
     if (stages.length > 12) return "Add no more than 12 workflow stages.";
     if (stages.some(stage => stage.length > 80)) return "Each workflow stage must be 80 characters or fewer.";
     const keys = stages.map(stage => stage.toLocaleLowerCase());

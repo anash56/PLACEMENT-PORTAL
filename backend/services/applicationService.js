@@ -9,7 +9,9 @@ const fail = (message, statusCode = 400) => Object.assign(new Error(message), { 
 const STATUS_HISTORY_POPULATE = { path: "statusHistory.changedBy", select: "name role" };
 const LEGACY_STAGE_HISTORY_POPULATE = { path: "stageHistory.changedBy", select: "name role" };
 const LEGACY_STATUS_SET = new Set(LEGACY_APPLICATION_STATUSES);
-
+const SELECTED_STATUSES = new Set(["Selected", "Offered"]);
+const CLOSED_STATUSES = new Set(["Rejected", "Withdrawn"]);
+const TERMINAL_STATUSES = [...SELECTED_STATUSES, ...CLOSED_STATUSES];
 
 const LEGACY_FINAL_STATUSES = new Set(["Offered", ...FINAL_APPLICATION_STATUSES]);
 
@@ -85,6 +87,10 @@ function buildWorkflowStages(jobStages = []) {
     return stages;
 }
 
+function escapeRegex(value) {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 export const applyJob = async (studentId, role, jobId) => {
     if (role !== "student") throw fail("Only students can apply for jobs.", 403);
     const user = await User.findById(studentId).lean();
@@ -124,26 +130,74 @@ export const applyJob = async (studentId, role, jobId) => {
     }
 };
 
-export const getMyApplications = async (studentId, queryParams) => {
+export const getMyApplications = async (studentId, queryParams = {}) => {
     const page = Math.max(1, Number(queryParams.page) || 1);
     const limit = Math.min(50, Math.max(1, Number(queryParams.limit) || 5));
     const filter = { student: studentId };
-    const totalApplications = await Application.countDocuments(filter);
-    const applications = await Application.find(filter)
-        .select("+currentStage +stageHistory")
-        .populate({ path: "job", populate: { path: "college", select: "name" } })
-        .populate(STATUS_HISTORY_POPULATE)
-        .populate(LEGACY_STAGE_HISTORY_POPULATE)
-        .sort({ createdAt: -1 })
-        .skip((page - 1) * limit)
-        .limit(limit)
-        .lean();
+    const category = String(queryParams.category || "all").trim().toLowerCase();
+    const requestedStatus = String(queryParams.status || "").trim().slice(0, 80);
+    const search = String(queryParams.search || "").trim().slice(0, 100);
+    const statusClauses = [];
+
+    if (category === "active") statusClauses.push({ status: { $nin: TERMINAL_STATUSES } });
+    if (category === "selected") statusClauses.push({ status: { $in: [...SELECTED_STATUSES] } });
+    if (category === "closed") statusClauses.push({ status: { $in: [...CLOSED_STATUSES] } });
+    if (requestedStatus) statusClauses.push({ status: requestedStatus });
+    if (statusClauses.length === 1) Object.assign(filter, statusClauses[0]);
+    if (statusClauses.length > 1) filter.$and = statusClauses;
+
+    // Search is limited to job title/company. Escape regex metacharacters so user input is literal.
+    if (search) {
+        const searchRegex = new RegExp(escapeRegex(search), "i");
+        const matchingJobIds = await Job.find({ $or: [{ title: searchRegex }, { company: searchRegex }] }).distinct("_id");
+        filter.job = { $in: matchingJobIds };
+    }
+
+    const sortKey = String(queryParams.sort || "updated");
+    const sort = sortKey === "applied-oldest"
+        ? { createdAt: 1, _id: 1 }
+        : sortKey === "applied-newest"
+            ? { createdAt: -1, _id: -1 }
+            : { updatedAt: -1, createdAt: -1, _id: -1 };
+
+    const studentObjectId = mongoose.isValidObjectId(studentId)
+        ? new mongoose.Types.ObjectId(studentId)
+        : studentId;
+    const [totalApplications, allApplicationsCount, statusAggregation, availableStatuses, applications] = await Promise.all([
+        Application.countDocuments(filter),
+        Application.countDocuments({ student: studentId }),
+        Application.aggregate([
+            { $match: { student: studentObjectId } },
+            { $group: { _id: "$status", count: { $sum: 1 } } },
+        ]),
+        Application.distinct("status", { student: studentId }),
+        Application.find(filter)
+            .select("+currentStage +stageHistory")
+            .populate({ path: "job", populate: { path: "college", select: "name" } })
+            .populate(STATUS_HISTORY_POPULATE)
+            .populate(LEGACY_STAGE_HISTORY_POPULATE)
+            .sort(sort)
+            .skip((page - 1) * limit)
+            .limit(limit)
+            .lean(),
+    ]);
+
+    const categoryCounts = { all: allApplicationsCount, active: 0, selected: 0, closed: 0 };
+    for (const item of statusAggregation) {
+        const count = Number(item.count || 0);
+        if (SELECTED_STATUSES.has(item._id)) categoryCounts.selected += count;
+        else if (CLOSED_STATUSES.has(item._id)) categoryCounts.closed += count;
+        else categoryCounts.active += count;
+    }
 
     return {
         applications: applications.map(workflowSnapshot),
         totalPages: Math.max(1, Math.ceil(totalApplications / limit)),
         currentPage: page,
         totalApplications,
+        allApplicationsCount,
+        categoryCounts,
+        availableStatuses: availableStatuses.filter(Boolean).sort((a, b) => String(a).localeCompare(String(b))),
     };
 };
 
