@@ -1,16 +1,66 @@
-import { useEffect } from "react";
-import "./portal-consistency.css";
-import "./contrast-safety.css";
+import { useEffect, useId, useRef } from "react";
 
 function Modal({ open, title, children, onClose }) {
+    const panelRef = useRef(null);
+    const closeHandlerRef = useRef(onClose);
+    const titleId = useId();
+    closeHandlerRef.current = onClose;
+
     useEffect(() => {
         if (!open) return undefined;
+
+        const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+        const panel = panelRef.current;
+        const focusableSelector = [
+            "a[href]",
+            "button:not([disabled])",
+            "input:not([disabled]):not([type='hidden'])",
+            "select:not([disabled])",
+            "textarea:not([disabled])",
+            "[tabindex]:not([tabindex='-1'])",
+        ].join(",");
+
+        const getFocusable = () => Array.from(panel?.querySelectorAll(focusableSelector) || [])
+            .filter(element => !element.hasAttribute("hidden") && element.getAttribute("aria-hidden") !== "true");
+
+        const focusable = getFocusable();
+        (focusable[0] || panel)?.focus({ preventScroll: true });
+
         const onKeyDown = event => {
-            if (event.key === "Escape") onClose?.();
+            if (event.key === "Escape") {
+                event.preventDefault();
+                closeHandlerRef.current?.();
+                return;
+            }
+
+            if (event.key !== "Tab" || !panel) return;
+            const items = getFocusable();
+            if (!items.length) {
+                event.preventDefault();
+                panel.focus();
+                return;
+            }
+
+            const first = items[0];
+            const last = items[items.length - 1];
+            if (event.shiftKey && (document.activeElement === first || document.activeElement === panel)) {
+                event.preventDefault();
+                last.focus();
+            } else if (!event.shiftKey && document.activeElement === last) {
+                event.preventDefault();
+                first.focus();
+            } else if (!panel.contains(document.activeElement)) {
+                event.preventDefault();
+                first.focus();
+            }
         };
+
         window.addEventListener("keydown", onKeyDown);
-        return () => window.removeEventListener("keydown", onKeyDown);
-    }, [open, onClose]);
+        return () => {
+            window.removeEventListener("keydown", onKeyDown);
+            if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
+        };
+    }, [open]);
 
     if (!open) return null;
 
@@ -19,14 +69,16 @@ function Modal({ open, title, children, onClose }) {
             className="portal-modal-backdrop"
             role="presentation"
             onMouseDown={event => {
-                if (event.target === event.currentTarget) onClose?.();
+                if (event.target === event.currentTarget) closeHandlerRef.current?.();
             }}
         >
             <section
+                ref={panelRef}
                 className="portal-modal-panel"
                 role="dialog"
                 aria-modal="true"
-                aria-label={title || "Dialog"}
+                aria-labelledby={titleId}
+                tabIndex={-1}
             >
                 <header className="portal-modal-header">
                     <div className="portal-modal-heading">
@@ -38,10 +90,10 @@ function Modal({ open, title, children, onClose }) {
                         </span>
                         <div className="portal-modal-heading-copy">
                             <span className="portal-modal-eyebrow">PLACEMENT PORTAL</span>
-                            <h2 className="portal-modal-title">{title}</h2>
+                            <h2 id={titleId} className="portal-modal-title">{title}</h2>
                         </div>
                     </div>
-                    <button type="button" className="portal-modal-close" onClick={onClose} aria-label="Close dialog">×</button>
+                    <button type="button" className="portal-modal-close" onClick={() => closeHandlerRef.current?.()} aria-label="Close dialog">×</button>
                 </header>
                 <div className="portal-modal-body">{children}</div>
             </section>

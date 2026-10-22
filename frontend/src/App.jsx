@@ -5,7 +5,6 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import RoleRoute from "./components/RoleRoute";
 import AdminLayout from "./layouts/AdminLayout";
 import { useAuth } from "./context/AuthContext";
-import "./workflow-contrast.css";
 
 const LandingPage = lazy(() => import("./pages/LandingPage"));
 const Login = lazy(() => import("./pages/Login"));

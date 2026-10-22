@@ -1,0 +1,202 @@
+/* Placement Portal shared design tokens and final consistency rules.
+   Keep this file imported last in main.jsx so legacy utility and workspace rules
+   cannot silently override high-contrast text, controls, or responsive safeguards. */
+:root {
+  --pp-navy-950: #071b3b;
+  --pp-navy-900: #0b2e61;
+  --pp-blue-800: #174f97;
+  --pp-blue-700: #245e9b;
+  --pp-blue-600: #2869b8;
+  --pp-blue-100: #eaf2ff;
+  --pp-ink: #102747;
+  --pp-muted: #5f718a;
+  --pp-muted-strong: #405773;
+  --pp-line: #dfe8f4;
+  --pp-surface: #ffffff;
+  --pp-surface-soft: #f4f8fe;
+  --pp-page: #f4f7fc;
+  --pp-focus: #75a8ee;
+  --pp-radius-control: 0.75rem;
+  --pp-radius-card: 1.15rem;
+  --pp-shadow-card: 0 5px 18px rgb(16 43 83 / 5%);
+  --pp-shadow-card-hover: 0 10px 25px rgb(16 43 83 / 8%);
+
+  /* Backwards-compatible aliases used by earlier CSS files. */
+  --portal-navy: var(--pp-navy-950);
+  --portal-blue-deep: var(--pp-navy-900);
+  --portal-blue: var(--pp-blue-700);
+  --portal-ink: var(--pp-ink);
+  --portal-muted: var(--pp-muted);
+  --portal-line: var(--pp-line);
+  --portal-surface: var(--pp-surface);
+  --portal-surface-soft: var(--pp-surface-soft);
+  --portal-border: var(--pp-line);
+  --portal-shadow: var(--pp-shadow-card);
+  --portal-shadow-hover: var(--pp-shadow-card-hover);
+  --brand-950: var(--pp-navy-950);
+  --brand-900: var(--pp-navy-900);
+  --ink: var(--pp-ink);
+  --muted: var(--pp-muted);
+  --line: var(--pp-line);
+  --surface: var(--pp-surface);
+  --page: var(--pp-page);
+}
+
+/* One contrast policy: dark navy heroes use white headings; pale gradients use navy.
+   The class-color checks retain compatibility with current JSX. Prefer adding the
+   explicit data-surface attribute for any new gradient container. */
+html body .portal-page.portal-page [class*="linear-gradient"]:not([class*="#071b3b"]) :is(h1, h2, h3),
+html body .portal-admin-scroll .portal-page.portal-page [class*="linear-gradient"]:not([class*="#071b3b"]) :is(h1, h2, h3),
+html body .portal-page.portal-page.portal-page [data-surface="light-gradient"] :is(h1, h2, h3) {
+  color: var(--pp-ink) !important;
+  -webkit-text-fill-color: var(--pp-ink) !important;
+}
+
+html body .portal-page.portal-page [class*="linear-gradient"][class*="#071b3b"] :is(h1, h2, h3),
+html body .portal-admin-scroll .portal-page.portal-page [class*="linear-gradient"][class*="#071b3b"] :is(h1, h2, h3),
+html body .portal-page.portal-page [data-surface="dark-hero"] :is(h1, h2, h3) {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+/* Named light surfaces win even if a nested component uses a legacy text-white class. */
+html body .portal-page.portal-page.portal-page [data-surface="light-gradient"] :is(h1, h2, h3),
+html body main.portal-page.portal-page #application-action-title {
+  color: var(--pp-ink) !important;
+  -webkit-text-fill-color: var(--pp-ink) !important;
+}
+
+/* Preserve the intended warm tone on the amber verification callout. */
+html body .portal-page.portal-page [class*="#fffbeb"] :is(h1, h2, h3) {
+  color: #78350f !important;
+  -webkit-text-fill-color: #78350f !important;
+}
+
+/* Keep the canvas and cards distinct but restrained across student/admin screens. */
+.portal-page {
+  min-width: 0;
+  color: var(--pp-ink);
+  background-color: var(--pp-page);
+}
+
+.portal-page .portal-page-content {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.portal-page .portal-card {
+  min-width: 0;
+  max-width: 100%;
+  border-color: var(--pp-line) !important;
+  border-radius: var(--pp-radius-card);
+  background: var(--pp-surface) !important;
+  box-shadow: var(--pp-shadow-card) !important;
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.portal-page .portal-card:hover {
+  border-color: #cbdcf0 !important;
+  box-shadow: var(--pp-shadow-card-hover) !important;
+}
+
+.portal-page .portal-card [class*="bg-slate-50"],
+.portal-page .portal-card [class*="bg-gray-50"] {
+  background-color: var(--pp-surface-soft);
+}
+
+/* Grid and flex children must be allowed to shrink; this fixes many mobile overflows
+   without hiding them with overflow-x:hidden or clipping page content. */
+.portal-page .portal-page-content > *,
+.portal-page .grid > *,
+.portal-page .flex > * {
+  min-width: 0;
+}
+
+.portal-page :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), select, textarea) {
+  min-width: 0;
+  max-width: 100%;
+  border-color: #d7e3f2;
+  border-radius: var(--pp-radius-control);
+  color: var(--pp-ink);
+  background-color: var(--pp-surface);
+  transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+}
+
+.portal-page :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), select, textarea):focus-visible {
+  border-color: #7d9fc9;
+  outline: 3px solid rgb(117 168 238 / 35%);
+  outline-offset: 1px;
+  box-shadow: 0 0 0 3px rgb(36 94 155 / 10%);
+}
+
+.portal-page :is(input, select, textarea, fieldset, img, video, iframe, canvas) {
+  max-width: 100%;
+}
+
+.portal-page :is(h1, h2, h3, p, li, td, dd, dt, label, a, button, strong) {
+  overflow-wrap: anywhere;
+}
+
+.portal-page :is(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline-color: var(--pp-focus);
+  outline-offset: 2px;
+}
+
+.portal-page .portal-button {
+  max-width: 100%;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+/* Shared neutral text contrast. Semantic success/warning/error badges keep their tone. */
+.portal-page .text-slate-400,
+.portal-page .text-gray-400 {
+  color: #64748b;
+}
+
+.portal-page .text-slate-500,
+.portal-page .text-gray-500 {
+  color: var(--pp-muted);
+}
+
+.portal-page .text-slate-600,
+.portal-page .text-gray-600 {
+  color: var(--pp-muted-strong);
+}
+
+@media (max-width: 640px) {
+  .portal-page {
+    padding-inline: max(1rem, env(safe-area-inset-left)) !important;
+  }
+
+  .portal-page .portal-page-content {
+    padding-inline: 0;
+  }
+
+  .portal-page .grid,
+  .portal-page .flex {
+    min-width: 0;
+  }
+
+  .portal-page .portal-card {
+    border-radius: 1rem;
+  }
+
+  .portal-page :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), select, textarea) {
+    font-size: 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .portal-page .portal-card,
+  .portal-page .portal-button,
+  .portal-page a,
+  .portal-page button,
+  .portal-page input,
+  .portal-page select,
+  .portal-page textarea {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}

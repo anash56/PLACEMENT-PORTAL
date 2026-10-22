@@ -1,9 +1,14 @@
-﻿import { StrictMode } from "react";
+import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { Toaster } from "react-hot-toast";
 import "./index.css";
 import "./landing.css";
 import "./workspace-polish.css";
+// Load the shared site-wide styles once, in a deliberate order, before rendering the app.
+import "./components/ui/portal-consistency.css";
+import "./components/ui/contrast-safety.css";
+import "./workflow-contrast.css";
+import "./design-system-overrides.css";
 import App from "./App.jsx";
 import { AuthProvider } from "./context/AuthContext.jsx";
 
@@ -85,4 +90,3 @@ createRoot(document.getElementById("root")).render(
     </AuthProvider>
   </StrictMode>,
 );
-
