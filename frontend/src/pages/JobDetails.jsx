@@ -149,17 +149,10 @@ export default function JobDetails() {
         <MetadataCard label="Application deadline" value={formatDate(job.deadline)} icon="calendar" />
       </section>
 
-      <div className="grid min-w-0 items-start gap-5 lg:grid-cols-[minmax(0,1.65fr)_minmax(250px,.8fr)]">
-        <Card className="min-w-0 !p-5 sm:!p-7">
-          <p className="text-[10px] font-extrabold uppercase tracking-[.18em] text-[#365e85]">Role overview</p>
-          <h2 className="mt-2 text-xl font-extrabold tracking-tight text-slate-900 sm:text-2xl">Job description</h2>
-          <div className="mt-5 whitespace-pre-wrap break-words text-sm leading-7 text-slate-700">{job.description || "The employer has not provided a detailed description for this role."}</div>
-        </Card>
-
-        <div className="grid min-w-0 gap-5">
-          <Card className="min-w-0 !p-5 sm:!p-6">
-            <p className="text-[10px] font-extrabold uppercase tracking-[.18em] text-[#365e85]">Eligibility</p>
-            <h2 className="mt-2 text-lg font-extrabold text-slate-900">Requirements</h2>
+      <div className="portal-job-details-grid grid min-w-0 items-start gap-5 lg:grid-cols-[minmax(250px,.8fr)_minmax(0,1.65fr)]">
+        <div className="portal-job-eligibility-column grid min-w-0 gap-5">
+          <Card className="portal-job-eligibility-card min-w-0 !p-5 sm:!p-6">
+            <h2 className="text-lg font-extrabold text-slate-900">Eligibility</h2>
             <div className="mt-4 divide-y divide-slate-100">
               <div className="py-3"><p className="text-xs font-semibold text-slate-500">Minimum CGPA</p><p className="mt-1 break-words text-sm font-bold text-slate-800">{Number(job.minCgpa) > 0 ? `${job.minCgpa} out of 10` : "No minimum CGPA specified"}</p></div>
               <div className="py-3"><p className="text-xs font-semibold text-slate-500">Eligible branches</p>{branches.length ? <div className="mt-2 flex flex-wrap gap-2">{branches.map(branch => <span key={branch} className="max-w-full break-words rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-700">{branch}</span>)}</div> : <p className="mt-1 text-sm font-bold text-slate-800">All branches</p>}</div>
@@ -170,6 +163,11 @@ export default function JobDetails() {
             <div className="flex items-start gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-blue-50 text-[#245e9b]"><Icon type="building" className="h-5 w-5"/></span><div className="min-w-0"><h2 className="text-base font-extrabold text-slate-900">Posting information</h2><p className="mt-1 break-words text-sm leading-6 text-slate-600">{job.college?.name || "Your college placement portal"}</p><p className="mt-2 text-xs leading-5 text-slate-500">For questions about this opportunity, contact your college placement team.</p></div></div>
           </Card>
         </div>
+        <Card className="portal-job-description-card min-w-0 !p-5 sm:!p-7">
+          <p className="text-[10px] font-extrabold uppercase tracking-[.18em] text-[#365e85]">Role overview</p>
+          <h2 className="mt-2 text-xl font-extrabold tracking-tight text-slate-900 sm:text-2xl">Job description</h2>
+          <div className="mt-5 whitespace-pre-wrap break-words text-sm leading-7 text-slate-700">{job.description || "The employer has not provided a detailed description for this role."}</div>
+        </Card>
       </div>
 
       <section className="mt-7 min-w-0 rounded-[24px] border border-blue-100 bg-[linear-gradient(120deg,#eef5ff_0%,#ffffff_65%,#f7faff_100%)] p-5 shadow-[0_8px_24px_rgba(18,57,109,.04)] sm:p-7 lg:p-8" aria-labelledby="application-action-title">

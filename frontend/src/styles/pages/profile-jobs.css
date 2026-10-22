@@ -70,3 +70,98 @@
     grid-column: auto !important;
   }
 }
+
+/* JOB SEARCH PANEL POLISH
+   Keep search controls aligned and give the page a deliberate responsive grid. */
+.portal-page .portal-job-search-panel {
+  border-color: #d6e4f6 !important;
+  border-radius: 1.25rem !important;
+  background: linear-gradient(145deg, #ffffff 0%, #f9fbff 100%) !important;
+  box-shadow: 0 7px 24px rgb(16 43 83 / 5%) !important;
+}
+
+.portal-page .portal-job-search-heading h2 {
+  color: #17345c;
+  letter-spacing: -.025em;
+}
+
+.portal-page .portal-job-search-form {
+  align-items: end;
+  column-gap: .85rem;
+  row-gap: .9rem;
+}
+
+.portal-page .portal-job-search-form label {
+  display: block;
+  min-height: 1.25rem;
+  margin-bottom: .5rem;
+  color: #344b68;
+  font-size: .875rem;
+  font-weight: 700;
+  line-height: 1.25rem;
+}
+
+.portal-page .portal-job-search-form .portal-job-search-field input,
+.portal-page .portal-job-search-form .portal-job-search-sort select {
+  box-sizing: border-box;
+  width: 100%;
+  height: 46px;
+  min-height: 46px;
+  border: 1px solid #d6e4f6;
+  border-radius: .9rem;
+  background-color: #ffffff;
+  color: #17345c;
+}
+
+.portal-page .portal-job-search-form .portal-job-search-field input {
+  padding-top: .7rem !important;
+  padding-bottom: .7rem !important;
+}
+
+.portal-page .portal-job-search-form .portal-job-search-field input::placeholder {
+  color: #8798b0;
+  opacity: 1;
+}
+
+.portal-page .portal-job-search-form .portal-job-search-sort select {
+  padding: .65rem .85rem;
+}
+
+.portal-page .portal-job-search-form .portal-job-search-submit {
+  height: 46px;
+  min-height: 46px !important;
+  align-self: end;
+  border-radius: .9rem !important;
+  white-space: nowrap;
+}
+
+@media (min-width: 1100px) {
+  .portal-page .portal-job-search-form {
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr) minmax(170px, .8fr) auto !important;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1099px) {
+  .portal-page .portal-job-search-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .portal-page .portal-job-search-form .portal-job-search-submit {
+    width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .portal-page .portal-job-search-panel {
+    padding: 1.1rem !important;
+    border-radius: 1rem !important;
+  }
+
+  .portal-page .portal-job-search-form {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .portal-page .portal-job-search-form .portal-job-search-submit {
+    width: 100%;
+  }
+}

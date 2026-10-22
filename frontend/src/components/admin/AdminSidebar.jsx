@@ -43,8 +43,8 @@ export default function AdminSidebar({ sidebarOpen, closeSidebar }) {
             </nav>
             <div className="mt-auto border-t border-gray-200 pt-4">
                 <div className="mb-4 min-w-0 px-2">
-                    <p className="break-words text-sm font-medium text-gray-900">{user?.name || "Admin"}</p>
-                    <p className="break-words text-xs text-gray-500">{user?.email}</p>
+                    <p className="break-words text-base font-semibold text-gray-900">{user?.name || "Admin"}</p>
+                    <p className="break-words text-sm text-gray-500">{user?.email}</p>
                 </div>
                 <button
                     type="button"

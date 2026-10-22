@@ -328,3 +328,17 @@ button.portal-admin-signout svg {
     transform: none !important;
   }
 }
+
+/* Match the student account sign-out control, including its larger tap target. */
+button.portal-admin-signout {
+  min-height: 4rem !important;
+  border-radius: 1rem !important;
+  padding: .9rem 1rem !important;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+button.portal-admin-signout svg {
+  width: 1.125rem;
+  height: 1.125rem;
+}
