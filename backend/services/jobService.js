@@ -97,9 +97,20 @@ export const getJobs = async (queryParams, actor) => {
     let query = Job.find(filter).populate("createdBy", "name email").populate("college", "name").lean();
     query = sort === "salary" ? query.sort({ salary: -1 }) : query.sort({ createdAt: -1 });
 
-    // Student eligibility is checked before pagination to keep totals/pages accurate.
+    // Expired jobs stop appearing in Find Opportunities after 11:59:59 p.m.
+    // Only the student opportunity listing is filtered: admin views and application
+    // history remain unchanged. Missing deadlines continue to mean no deadline.
     if (actor.role === "student") {
-        const matching = (await query).filter(job => meetsJobEligibility(job, actor));
+        const now = new Date();
+        const matching = (await query).filter(job => {
+            if (job.deadline) {
+                // Match applyJob's existing rule: deadline means the end of that date.
+                const deadlineEnd = new Date(job.deadline);
+                deadlineEnd.setHours(23, 59, 59, 999);
+                if (now > deadlineEnd) return false;
+            }
+            return meetsJobEligibility(job, actor);
+        });
         const totalJobs = matching.length;
         const jobs = matching.slice((page - 1) * limit, page * limit);
         return { totalJobs, currentPage: page, totalPages: Math.max(1, Math.ceil(totalJobs / limit)), jobs };
