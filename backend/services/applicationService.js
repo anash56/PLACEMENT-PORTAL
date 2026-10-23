@@ -4,6 +4,7 @@ import Job from "../models/Job.js";
 import User from "../models/User.js";
 import College from "../models/College.js";
 import { meetsJobEligibility } from "./eligibilityService.js";
+import { isDeadlinePassed } from "./deadlineUtils.js";
 
 const fail = (message, statusCode = 400) => Object.assign(new Error(message), { statusCode });
 const STATUS_HISTORY_POPULATE = { path: "statusHistory.changedBy", select: "name role" };
@@ -104,10 +105,8 @@ export const applyJob = async (studentId, role, jobId) => {
     if (!job) throw fail("Job not found.", 404);
     if (String(job.college) !== String(user.college)) throw fail("You can apply only to jobs from your own college.", 403);
     if (!user.isProfileCompleted || !user.resumeUrl) throw fail("Please complete your profile and upload your resume before applying.");
-    if (job.deadline) {
-        const deadline = new Date(job.deadline);
-        deadline.setHours(23, 59, 59, 999);
-        if (new Date() > deadline) throw fail("The application deadline for this job has passed.");
+    if (isDeadlinePassed(job.deadline)) {
+        throw fail("The application deadline for this job has passed.");
     }
     if (!meetsJobEligibility(job, user)) {
         if (job.minCgpa > 0 && (user.cgpa === undefined || user.cgpa < job.minCgpa)) {

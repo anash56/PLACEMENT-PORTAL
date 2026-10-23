@@ -3,6 +3,7 @@ import Job from "../models/Job.js";
 import Application from "../models/Application.js";
 import College from "../models/College.js";
 import { meetsJobEligibility } from "./eligibilityService.js";
+import { isDeadlinePassed } from "./deadlineUtils.js";
 
 const fail = (message, statusCode = 400) => Object.assign(new Error(message), { statusCode });
 const escapeRegex = value => String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -100,17 +101,11 @@ export const getJobs = async (queryParams, actor) => {
     // Expired jobs stop appearing in Find Opportunities after 11:59:59 p.m.
     // Only the student opportunity listing is filtered: admin views and application
     // history remain unchanged. Missing deadlines continue to mean no deadline.
+    // Use the shared IST deadline rule for student listings.
     if (actor.role === "student") {
-        const now = new Date();
-        const matching = (await query).filter(job => {
-            if (job.deadline) {
-                // Match applyJob's existing rule: deadline means the end of that date.
-                const deadlineEnd = new Date(job.deadline);
-                deadlineEnd.setHours(23, 59, 59, 999);
-                if (now > deadlineEnd) return false;
-            }
-            return meetsJobEligibility(job, actor);
-        });
+        const matching = (await query).filter(job =>
+            !isDeadlinePassed(job.deadline) && meetsJobEligibility(job, actor)
+        );
         const totalJobs = matching.length;
         const jobs = matching.slice((page - 1) * limit, page * limit);
         return { totalJobs, currentPage: page, totalPages: Math.max(1, Math.ceil(totalJobs / limit)), jobs };
