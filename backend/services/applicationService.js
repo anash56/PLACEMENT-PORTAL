@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { normalizePagination } from "../utils/pagination.js";
 import Application, { FINAL_APPLICATION_STATUSES, LEGACY_APPLICATION_STATUSES } from "../models/Application.js";
 import Job from "../models/Job.js";
 import User from "../models/User.js";
@@ -130,8 +131,7 @@ export const applyJob = async (studentId, role, jobId) => {
 };
 
 export const getMyApplications = async (studentId, queryParams = {}) => {
-    const page = Math.max(1, Number(queryParams.page) || 1);
-    const limit = Math.min(50, Math.max(1, Number(queryParams.limit) || 5));
+    const { page, limit } = normalizePagination(queryParams, 5, 50);
     const filter = { student: studentId };
     const category = String(queryParams.category || "all").trim().toLowerCase();
     const requestedStatus = String(queryParams.status || "").trim().slice(0, 80);
@@ -200,22 +200,65 @@ export const getMyApplications = async (studentId, queryParams = {}) => {
     };
 };
 
-export const getApplicantsByJob = async (jobId, actor) => {
+export const getApplicantsByJob = async (jobId, actor, queryParams = {}) => {
     if (!mongoose.isValidObjectId(jobId)) throw fail("Invalid job ID.");
     const jobFilter = actor.role === "super_admin" ? { _id: jobId } : { _id: jobId, college: actor.college };
     const job = await Job.findOne(jobFilter).select("_id college selectionStages").lean();
     if (!job) throw fail("Job not found in your college.", 404);
 
-    const applications = await Application.find({ job: job._id })
+    const { page: requestedPage, limit } = normalizePagination(queryParams, 10, 50);
+    const filter = { job: job._id };
+    const requestedStatus = String(queryParams.status || "").trim().slice(0, 80);
+    const search = String(queryParams.search || "").trim().slice(0, 100);
+    if (requestedStatus && requestedStatus !== "All statuses") filter.status = requestedStatus;
+
+    if (search) {
+        const searchRegex = new RegExp(escapeRegex(search), "i");
+        const studentSearch = {
+            $or: [
+                { name: searchRegex },
+                { email: searchRegex },
+                { branch: searchRegex },
+                { skills: searchRegex },
+                ...( /^\d{4}$/.test(search) ? [{ graduationYear: Number(search) }] : []),
+            ],
+        };
+        const matchingStudentIds = await User.find(studentSearch).distinct("_id");
+        filter.student = { $in: matchingStudentIds };
+    }
+
+    const [totalApplications, allApplicationsCount, statusAggregation, availableStatuses] = await Promise.all([
+        Application.countDocuments(filter),
+        Application.countDocuments({ job: job._id }),
+        Application.aggregate([
+            { $match: { job: job._id } },
+            { $group: { _id: "$status", count: { $sum: 1 } } },
+        ]),
+        Application.distinct("status", { job: job._id }),
+    ]);
+
+    const totalPages = Math.max(1, Math.ceil(totalApplications / limit));
+    const currentPage = Math.min(requestedPage, totalPages);
+    const applications = await Application.find(filter)
         .select("+currentStage +stageHistory")
         .populate("job", "title company selectionStages")
         .populate("student", "name email cgpa branch graduationYear skills contactNumber resumeUrl verificationStatus")
         .populate(STATUS_HISTORY_POPULATE)
         .populate(LEGACY_STAGE_HISTORY_POPULATE)
-        .sort({ createdAt: -1 })
+        .sort({ createdAt: -1, _id: -1 })
+        .skip((currentPage - 1) * limit)
+        .limit(limit)
         .lean();
 
-    return applications.map(workflowSnapshot);
+    return {
+        applications: applications.map(workflowSnapshot),
+        currentPage,
+        totalPages,
+        totalApplications,
+        allApplicationsCount,
+        statusCounts: Object.fromEntries(statusAggregation.map(item => [item._id, Number(item.count || 0)])),
+        availableStatuses: availableStatuses.filter(Boolean).sort((a, b) => String(a).localeCompare(String(b))),
+    };
 };
 
 export const updateApplicationStatus = async (applicationId, updates = {}, actor) => {

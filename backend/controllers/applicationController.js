@@ -17,7 +17,7 @@ export const getMyApplications = async (req, res) => {
 };
 
 export const getApplicantsByJob = async (req, res) => {
-    try { return res.json(await applicationService.getApplicantsByJob(req.params.jobId, req.user)); }
+    try { return res.json(await applicationService.getApplicantsByJob(req.params.jobId, req.user, req.query)); }
     catch (error) { return sendError(res, error); }
 };
 
