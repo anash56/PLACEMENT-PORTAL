@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+﻿import mongoose from "mongoose";
 import Job from "../models/Job.js";
 import Application from "../models/Application.js";
 import College from "../models/College.js";
@@ -129,6 +129,10 @@ export const getJobById = async (jobId, actor) => {
         if (actor.verificationStatus !== "verified" || actor.collegeStatus !== "approved") {
             throw fail("Verify your college affiliation before viewing job details.", 403);
         }
+        // Keep direct detail URLs consistent with Find Opportunities and applyJob.
+        if (isDeadlinePassed(job.deadline)) {
+            throw fail("The application deadline for this job has passed.", 410);
+        }
         if (!meetsJobEligibility(job, actor)) {
             throw fail("This job does not match your CGPA or branch eligibility.", 403);
         }
@@ -168,3 +172,4 @@ export const deleteJob = async (jobId, actor) => {
     await Application.deleteMany({ job: jobId });
     return { message: "Job deleted successfully." };
 };
+
