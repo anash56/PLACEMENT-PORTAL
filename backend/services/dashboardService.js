@@ -110,7 +110,7 @@ export const getDashboardStats = async ({ role, college } = {}) => {
         },
         placedSalaryStats: {
             averagePlacedSalary: Math.round(placed.averagePlacedSalary || 0),
-            maxPlacedSalary: placed.maxSalary || 0,
+            maxPlacedSalary: placed.maxPlacedSalary || 0,
             minPlacedSalary: placed.minPlacedSalary || 0,
         },
         pendingStudentVerifications,

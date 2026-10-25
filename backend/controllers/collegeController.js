@@ -3,7 +3,8 @@ const sendError = (res, error) => res.status(error.statusCode || 500).json({ mes
 export const submitRequest = async (req, res) => { try { const college = await collegeService.submitCollegeRequest(req.body); return res.status(201).json({ message: "College request submitted for review.", college: { id: String(college._id), name: college.name, status: college.status } }); } catch (e) { return sendError(res, e); } };
 export const searchApproved = async (req, res) => { try { return res.json({ colleges: await collegeService.searchApprovedColleges(req.query.q) }); } catch (e) { return sendError(res, e); } };
 export const list = async (req, res) => { try { return res.json({ colleges: await collegeService.listColleges(req.query.status) }); } catch (e) { return sendError(res, e); } };
-const review = action => async (req, res) => { try { const result = await collegeService.reviewCollege(req.params.id, action, req.body.reason, req.user.id); return res.json({ message: action === "approve" ? "College approved." : `College ${action}d.`, ...result }); } catch (e) { return sendError(res, e); } };
+const reviewMessages = { approve: "College approved.", reject: "College rejected.", suspend: "College suspended.", restore: "College restored." };
+const review = action => async (req, res) => { try { const result = await collegeService.reviewCollege(req.params.id, action, req.body.reason, req.user.id); return res.json({ message: reviewMessages[action] || "College review processed.", ...result }); } catch (e) { return sendError(res, e); } };
 export const approve = review("approve");
 export const reject = review("reject");
 export const suspend = review("suspend");
