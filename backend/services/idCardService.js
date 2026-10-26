@@ -12,7 +12,6 @@ export const uploadCollegeIdCard = async (dataUri, userId) => {
     const mime = match[1];
     const buffer = Buffer.from(match[2], "base64");
     if (!buffer.length || buffer.length > 5 * 1024 * 1024) throw fail("College ID card must be no larger than 5 MB.");
-    // A small signature check helps reject files renamed to a permitted extension/MIME type.
     const validMagic = mime === "application/pdf" ? buffer.subarray(0, 5).toString() === "%PDF-"
         : mime === "image/jpeg" ? buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff
         : buffer.subarray(0, 8).equals(Buffer.from([137,80,78,71,13,10,26,10]));
@@ -26,9 +25,43 @@ export const uploadCollegeIdCard = async (dataUri, userId) => {
     return { publicId: result.public_id, resourceType, format: result.format || (resourceType === "raw" ? "pdf" : "jpg") };
 };
 
-export const getVerificationQueue = async collegeId => User.find({ college: collegeId, role: "student", verificationStatus: { $in: ["pending", "rejected"] } })
-    .select("name email cgpa branch graduationYear skills contactNumber verificationStatus verificationRejectionReason collegeIdCardPublicId collegeIdCardResourceType collegeIdCardFormat createdAt")
-    .sort({ createdAt: 1 }).lean();
+// Query only this administrator's college and only students awaiting a decision.
+export const getVerificationQueue = async (collegeId, queryParams = {}) => {
+    const requestedPage = Number(queryParams.page);
+    const requestedLimit = Number(queryParams.limit);
+    const page = Number.isSafeInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
+    const limit = Number.isSafeInteger(requestedLimit) && requestedLimit > 0 ? Math.min(requestedLimit, 50) : 10;
+    const search = String(queryParams.search || "").trim().slice(0, 100);
+    const filter = {
+        college: collegeId,
+        role: "student",
+        verificationStatus: { $in: ["pending", "rejected"] },
+    };
+
+    if (search) {
+        const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const searchRegex = new RegExp(escaped, "i");
+        filter.$or = [
+            { name: searchRegex },
+            { email: searchRegex },
+            { branch: searchRegex },
+            { contactNumber: searchRegex },
+            ...( /^\d{4}$/.test(search) ? [{ graduationYear: Number(search) }] : []),
+        ];
+    }
+
+    const totalStudents = await User.countDocuments(filter);
+    const totalPages = Math.max(1, Math.ceil(totalStudents / limit));
+    const currentPage = Math.min(page, totalPages);
+    const students = await User.find(filter)
+        .select("name email cgpa branch graduationYear skills contactNumber verificationStatus verificationRejectionReason collegeIdCardPublicId collegeIdCardResourceType collegeIdCardFormat createdAt")
+        .sort({ createdAt: 1, _id: 1 })
+        .skip((currentPage - 1) * limit)
+        .limit(limit)
+        .lean();
+
+    return { students, totalStudents, totalPages, currentPage, limit };
+};
 
 export const decideStudentVerification = async ({ studentId, collegeId, action, reason }) => {
     const student = await User.findOne({ _id: studentId, college: collegeId, role: "student" }).select("+collegeIdCardPublicId +collegeIdCardResourceType +collegeIdCardFormat");
@@ -53,7 +86,6 @@ export const getStudentIdCardUrl = async ({ studentId, collegeId }) => {
     const student = await User.findOne({ _id: studentId, college: collegeId, role: "student" }).select("+collegeIdCardPublicId +collegeIdCardResourceType +collegeIdCardFormat");
     if (!student?.collegeIdCardPublicId) throw fail("College ID card not found.", 404);
     const resourceType = student.collegeIdCardResourceType || "image";
-    // Authenticated delivery requires a signed URL; authorization is performed before creating it.
     const url = cloudinary.utils.private_download_url(
         student.collegeIdCardPublicId,
         student.collegeIdCardFormat,
