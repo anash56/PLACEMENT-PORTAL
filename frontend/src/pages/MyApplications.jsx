@@ -71,6 +71,7 @@ export default function MyApplications() {
             setCategoryCounts({ ...EMPTY_COUNTS, ...(data.categoryCounts || {}) });
             setAvailableStatuses(Array.isArray(data.availableStatuses) ? data.availableStatuses : []);
             setTotalPages(Math.max(1, Number(data.totalPages || 1)));
+            setPage(Math.max(1, Number(data.currentPage || page)));
         } catch (requestError) {
             if (requestId !== requestSequence.current) return;
             setError(

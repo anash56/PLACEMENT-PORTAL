@@ -181,6 +181,22 @@ export const getMyApplications = async (studentId, queryParams = {}) => {
             .lean(),
     ]);
 
+    // Keep the API page metadata and returned records consistent if filters or concurrent changes
+    // make a previously valid page number exceed the current result range.
+    const totalPages = Math.max(1, Math.ceil(totalApplications / limit));
+    const currentPage = Math.min(page, totalPages);
+    const currentApplications = currentPage === page
+        ? applications
+        : await Application.find(filter)
+            .select("+currentStage +stageHistory")
+            .populate({ path: "job", populate: { path: "college", select: "name" } })
+            .populate(STATUS_HISTORY_POPULATE)
+            .populate(LEGACY_STAGE_HISTORY_POPULATE)
+            .sort(sort)
+            .skip((currentPage - 1) * limit)
+            .limit(limit)
+            .lean();
+
     const categoryCounts = { all: allApplicationsCount, active: 0, selected: 0, closed: 0 };
     for (const item of statusAggregation) {
         const count = Number(item.count || 0);
@@ -190,9 +206,9 @@ export const getMyApplications = async (studentId, queryParams = {}) => {
     }
 
     return {
-        applications: applications.map(workflowSnapshot),
-        totalPages: Math.max(1, Math.ceil(totalApplications / limit)),
-        currentPage: page,
+        applications: currentApplications.map(workflowSnapshot),
+        totalPages,
+        currentPage,
         totalApplications,
         allApplicationsCount,
         categoryCounts,
