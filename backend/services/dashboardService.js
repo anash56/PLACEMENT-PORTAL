@@ -2,6 +2,7 @@ import User from "../models/User.js";
 import Job from "../models/Job.js";
 import Application from "../models/Application.js";
 import mongoose from "mongoose";
+import { getDeadlineEndAt, isDeadlinePassed } from "./deadlineUtils.js";
 
 const zero = { averageSalary: 0, maxSalary: 0, minSalary: 0 };
 const zeroPlaced = { averagePlacedSalary: 0, maxPlacedSalary: 0, minPlacedSalary: 0 };
@@ -25,7 +26,21 @@ export const getDashboardStats = async ({ role, college } = {}) => {
     const now = new Date();
     const sevenDaysFromNow = new Date(now);
     sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
-    const deadlineFilter = { ...jobFilter, deadline: { $gte: now, $lte: sevenDaysFromNow } };
+    // Query candidates, then apply the shared IST end-of-day deadline rule.
+    const deadlineCandidates = isCollegeAdmin
+        ? await Job.find({
+            ...jobFilter,
+            deadline: { $ne: null, $exists: true, $lte: sevenDaysFromNow },
+        }).select("_id title company deadline").sort({ deadline: 1 }).lean()
+        : [];
+    const upcomingDeadlinesForCollege = deadlineCandidates.filter(job => {
+        const endAt = getDeadlineEndAt(job.deadline);
+        return endAt && endAt.getTime() >= now.getTime() && endAt.getTime() <= sevenDaysFromNow.getTime();
+    }).slice(0, 5);
+    const upcomingDeadlineCountForCollege = deadlineCandidates.filter(job => {
+        const endAt = getDeadlineEndAt(job.deadline);
+        return endAt && endAt.getTime() >= now.getTime() && endAt.getTime() <= sevenDaysFromNow.getTime();
+    }).length;
 
     const [
         totalStudents,
@@ -65,10 +80,8 @@ export const getDashboardStats = async ({ role, college } = {}) => {
             { $group: { _id: null, averagePlacedSalary: { $avg: "$jobDetails.salary" }, maxPlacedSalary: { $max: "$jobDetails.salary" }, minPlacedSalary: { $min: "$jobDetails.salary" } } },
         ]),
         isCollegeAdmin ? User.countDocuments({ ...userFilter, verificationStatus: "pending" }) : Promise.resolve(0),
-        isCollegeAdmin ? Job.countDocuments(deadlineFilter) : Promise.resolve(0),
-        isCollegeAdmin
-            ? Job.find(deadlineFilter).select("_id title company deadline").sort({ deadline: 1 }).limit(5).lean()
-            : Promise.resolve([]),
+        Promise.resolve(upcomingDeadlineCountForCollege),
+        Promise.resolve(upcomingDeadlinesForCollege),
         isCollegeAdmin
             ? Job.find(jobFilter)
                 .select("_id title company location salary minCgpa allowedBranches deadline createdAt selectionStages")
