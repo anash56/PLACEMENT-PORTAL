@@ -62,6 +62,7 @@ export default function Jobs() {
       });
       setJobs(response.data.jobs || []);
       setTotalPages(response.data.totalPages || 1);
+      setPage(Math.max(1, Number(response.data.currentPage || page)));
       setAccessMessage(response.data.accessMessage || "");
     } catch (requestError) {
       setError(requestError.response?.data?.message || "Failed to load jobs.");

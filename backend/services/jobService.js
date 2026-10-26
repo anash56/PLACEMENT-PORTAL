@@ -1,12 +1,15 @@
-﻿import mongoose from "mongoose";
+import mongoose from "mongoose";
 import Job from "../models/Job.js";
 import Application from "../models/Application.js";
-import College from "../models/College.js";
 import { meetsJobEligibility } from "./eligibilityService.js";
-import { isDeadlinePassed } from "./deadlineUtils.js";
+import College from "../models/College.js";
+import { getDeadlineEndAt, isDeadlinePassed } from "./deadlineUtils.js";
 
 const fail = (message, statusCode = 400) => Object.assign(new Error(message), { statusCode });
-const escapeRegex = value => String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const escapeRegex = value =>
+    String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 const RESERVED_STAGE_NAMES = new Set(["submitted", "selected", "rejected", "withdrawn", "offered"]);
 
 const ensureJobCollegeActive = async collegeId => {
@@ -65,8 +68,10 @@ export const getJobs = async (queryParams, actor) => {
     const keyword = String(queryParams.keyword || "").trim().slice(0, 100);
     const location = String(queryParams.location || "").trim().slice(0, 100);
     const sort = queryParams.sort;
-    const page = Math.max(1, Number(queryParams.page) || 1);
-    const limit = Math.min(50, Math.max(1, Number(queryParams.limit) || 5));
+    const requestedPage = Number(queryParams.page);
+    const requestedLimit = Number(queryParams.limit);
+    const page = Number.isSafeInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
+    const limit = Number.isSafeInteger(requestedLimit) && requestedLimit > 0 ? Math.min(requestedLimit, 50) : 5;
     const filter = {};
 
     if (actor.role === "student") {
@@ -95,25 +100,63 @@ export const getJobs = async (queryParams, actor) => {
     }
     if (location) filter.location = { $regex: escapeRegex(location), $options: "i" };
 
-    let query = Job.find(filter).populate("createdBy", "name email").populate("college", "name").lean();
-    query = sort === "salary" ? query.sort({ salary: -1 }) : query.sort({ createdAt: -1 });
-
-    // Expired jobs stop appearing in Find Opportunities after 11:59:59 p.m.
-    // Only the student opportunity listing is filtered: admin views and application
-    // history remain unchanged. Missing deadlines continue to mean no deadline.
-    // Use the shared IST deadline rule for student listings.
+    // Keep student eligibility, expiry filtering, counts, and pagination in MongoDB.
+    // The public feed no longer needs to load every job for the student's college.
     if (actor.role === "student") {
-        const matching = (await query).filter(job =>
-            !isDeadlinePassed(job.deadline) && meetsJobEligibility(job, actor)
-        );
-        const totalJobs = matching.length;
-        const jobs = matching.slice((page - 1) * limit, page * limit);
-        return { totalJobs, currentPage: page, totalPages: Math.max(1, Math.ceil(totalJobs / limit)), jobs };
+        const numericCgpa = Number(actor.cgpa);
+        const maxEligibleCgpa = Number.isFinite(numericCgpa) ? numericCgpa : 0;
+        const studentBranch = String(actor.branch || "").trim();
+        const eligibilityClauses = [
+            {
+                $or: [
+                    { minCgpa: { $exists: false } },
+                    { minCgpa: null },
+                    { minCgpa: { $lte: maxEligibleCgpa } },
+                ],
+            },
+            {
+                $or: [
+                    { allowedBranches: { $exists: false } },
+                    { allowedBranches: null },
+                    { allowedBranches: { $size: 0 } },
+                    ...(studentBranch
+                        ? [{ allowedBranches: { $in: [new RegExp(`^${escapeRegex(studentBranch)}$`, "i")] } }]
+                        : []),
+                ],
+            },
+        ];
+
+        // Job deadlines are stored at the start of the UTC date from the HTML date input.
+        // Include that date until its IST end-of-day (23:59:59.999), then advance the cutoff.
+        const now = new Date();
+        const utcDayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+        const currentDayDeadlineEnd = getDeadlineEndAt(utcDayStart);
+        const earliestDeadlineDate = now.getTime() > currentDayDeadlineEnd.getTime()
+            ? new Date(utcDayStart.getTime() + 24 * 60 * 60 * 1000)
+            : utcDayStart;
+        eligibilityClauses.push({
+            $or: [
+                { deadline: null },
+                { deadline: { $gte: earliestDeadlineDate } },
+            ],
+        });
+        filter.$and = [...(filter.$and || []), ...eligibilityClauses];
     }
 
+    const sortOrder = sort === "salary"
+        ? { salary: -1, _id: -1 }
+        : { createdAt: -1, _id: -1 };
     const totalJobs = await Job.countDocuments(filter);
-    const jobs = await query.skip((page - 1) * limit).limit(limit);
-    return { totalJobs, currentPage: page, totalPages: Math.max(1, Math.ceil(totalJobs / limit)), jobs };
+    const totalPages = Math.max(1, Math.ceil(totalJobs / limit));
+    const currentPage = Math.min(page, totalPages);
+    const jobs = await Job.find(filter)
+        .populate("createdBy", "name email")
+        .populate("college", "name")
+        .sort(sortOrder)
+        .skip((currentPage - 1) * limit)
+        .limit(limit)
+        .lean();
+    return { totalJobs, currentPage, totalPages, jobs };
 };
 
 export const getJobById = async (jobId, actor) => {
