@@ -74,13 +74,27 @@ export default function Jobs() {
   useEffect(() => { load(); }, [load]);
 
   useEffect(() => {
-    if (!isStudent || user?.verificationStatus !== "verified") return;
-    api.get("/applications/my?limit=1000")
-      .then(response => setApplied((response.data.applications || [])
-        .filter(application => application.job)
-        .map(application => String(application.job._id))))
+    if (!isStudent || user?.verificationStatus !== "verified" || jobs.length === 0) {
+      setApplied([]);
+      return;
+    }
+
+    let active = true;
+    const jobIds = jobs.map(job => job._id).filter(Boolean);
+    api.get("/applications/my", {
+      params: { jobIds: jobIds.join(","), limit: 50 },
+    })
+      .then(response => {
+        if (!active) return;
+        setApplied((response.data.applications || [])
+          .map(application => application.job?._id || application.job)
+          .filter(Boolean)
+          .map(String));
+      })
       .catch(() => {});
-  }, [isStudent, user?.verificationStatus]);
+
+    return () => { active = false; };
+  }, [jobs, isStudent, user?.verificationStatus]);
 
   const hasFilters = Boolean(submittedSearch || submittedLocation);
   const verifiedStudent = isStudent && user?.verificationStatus === "verified";

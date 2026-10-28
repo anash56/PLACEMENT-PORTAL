@@ -133,6 +133,17 @@ export const applyJob = async (studentId, role, jobId) => {
 export const getMyApplications = async (studentId, queryParams = {}) => {
     const { page, limit } = normalizePagination(queryParams, 5, 50);
     const filter = { student: studentId };
+    // Targeted lookup lets the opportunities UI check only the jobs currently shown.
+    const requestedJobIds = queryParams.jobIds === undefined
+        ? null
+        : [...new Set(String(queryParams.jobIds).split(",")
+            .map(id => id.trim())
+            .filter(id => mongoose.isValidObjectId(id)))].slice(0, 50);
+    if (requestedJobIds !== null) {
+        filter.job = {
+            $in: requestedJobIds.map(id => new mongoose.Types.ObjectId(id)),
+        };
+    }
     const category = String(queryParams.category || "all").trim().toLowerCase();
     const requestedStatus = String(queryParams.status || "").trim().slice(0, 80);
     const search = String(queryParams.search || "").trim().slice(0, 100);
@@ -149,7 +160,12 @@ export const getMyApplications = async (studentId, queryParams = {}) => {
     if (search) {
         const searchRegex = new RegExp(escapeRegex(search), "i");
         const matchingJobIds = await Job.find({ $or: [{ title: searchRegex }, { company: searchRegex }] }).distinct("_id");
-        filter.job = { $in: matchingJobIds };
+        if (requestedJobIds !== null) {
+            const matchingIds = new Set(matchingJobIds.map(String));
+            filter.job.$in = filter.job.$in.filter(id => matchingIds.has(String(id)));
+        } else {
+            filter.job = { $in: matchingJobIds };
+        }
     }
 
     const sortKey = String(queryParams.sort || "updated");

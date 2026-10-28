@@ -79,7 +79,7 @@ export default function JobDetails() {
       });
 
     if (isStudent) {
-      api.get("/applications/my?limit=1000")
+      api.get("/applications/my", { params: { jobIds: jobId, limit: 1 } })
         .then(response => {
           if (!active) return;
           const applications = response.data.applications || [];
@@ -123,7 +123,16 @@ export default function JobDetails() {
   const branches = Array.isArray(job.allowedBranches) ? job.allowedBranches.filter(Boolean) : [];
   const postedBy = job.createdBy?.name || "College placement team";
   const postedAt = formatDate(job.createdAt);
-  const canApply = isAuthenticated && isStudent && user?.verificationStatus === "verified" && !alreadyApplied;
+  const profileReady = Boolean(user?.isProfileCompleted && user?.resumeUrl);
+  const profileRequirements = [
+    !user?.isProfileCompleted && "complete your student profile",
+    !user?.resumeUrl && "upload your resume",
+  ].filter(Boolean).join(" and ");
+  const canApply = isAuthenticated
+    && isStudent
+    && user?.verificationStatus === "verified"
+    && profileReady
+    && !alreadyApplied;
 
   return <PageContainer className="!py-7 sm:!py-10">
     <div className="mx-auto max-w-6xl min-w-0">
@@ -172,7 +181,7 @@ export default function JobDetails() {
 
       <section className="mt-7 min-w-0 rounded-[24px] border border-blue-100 bg-[linear-gradient(120deg,#eef5ff_0%,#ffffff_65%,#f7faff_100%)] p-5 shadow-[0_8px_24px_rgba(18,57,109,.04)] sm:p-7 lg:p-8" aria-labelledby="application-action-title">
         <div className="flex min-w-0 flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex min-w-0 items-start gap-3"><span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-blue-100 bg-white text-[#245e9b]"><Icon type="shield" className="h-5 w-5"/></span><div className="min-w-0"><p className="text-[10px] font-extrabold uppercase tracking-[.18em] text-[#365e85]">Next step</p><h2 id="application-action-title" className="mt-1 break-words text-xl font-extrabold text-slate-900">{alreadyApplied ? "You have applied for this role" : isStudent ? "Ready to apply?" : "Review the full role details"}</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">{alreadyApplied ? "Your application has been submitted. You can follow its progress from My applications." : isStudent ? "Check your saved profile and resume, then submit your application when you're ready." : "Students can submit applications from this page after reviewing the role and eligibility criteria."}</p></div></div>
+          <div className="flex min-w-0 items-start gap-3"><span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-blue-100 bg-white text-[#245e9b]"><Icon type="shield" className="h-5 w-5"/></span><div className="min-w-0"><p className="text-[10px] font-extrabold uppercase tracking-[.18em] text-[#365e85]">Next step</p><h2 id="application-action-title" className="mt-1 break-words text-xl font-extrabold text-slate-900">{alreadyApplied ? "You have applied for this role" : isStudent && !profileReady ? "Finish your profile first" : isStudent ? "Ready to apply?" : "Review the full role details"}</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">{alreadyApplied ? "Your application has been submitted. You can follow its progress from My applications." : isStudent && !profileReady ? `Before applying, please ${profileRequirements}.` : isStudent ? "Your profile and resume are ready. Review the role details, then submit your application when you're ready." : "Students can submit applications from this page after reviewing the role and eligibility criteria."}</p></div></div>
           <div className="flex min-w-0 shrink-0 flex-col gap-2 sm:min-w-[190px]">
             {alreadyApplied ? <Button onClick={() => navigate("/my-applications")} className="w-full justify-center">View my applications <Icon type="arrow" className="h-4 w-4"/></Button>
               : canApply ? <Button onClick={() => setApplyConfirmationOpen(true)} className="w-full justify-center">Submit application <Icon type="arrow" className="h-4 w-4"/></Button>
