@@ -52,6 +52,7 @@ export default function JobDetails() {
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [errorStatus, setErrorStatus] = useState(null);
   const [alreadyApplied, setAlreadyApplied] = useState(false);
   const [applyConfirmationOpen, setApplyConfirmationOpen] = useState(false);
   const [applying, setApplying] = useState(false);
@@ -67,12 +68,16 @@ export default function JobDetails() {
 
     setLoading(true);
     setError("");
+    setErrorStatus(null);
     api.get(`/jobs/${jobId}`)
       .then(response => {
         if (active) setJob(response.data.job || response.data);
       })
       .catch(requestError => {
-        if (active) setError(requestError.response?.data?.message || "We could not load this job posting.");
+        if (active) {
+          setErrorStatus(requestError.response?.status || null);
+          setError(requestError.response?.data?.message || "We could not load this job posting.");
+        }
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -116,8 +121,23 @@ export default function JobDetails() {
   }
 
   if (error || !job) {
-    const verificationIssue = isStudent && user?.verificationStatus !== "verified";
-    return <PageContainer className="!py-7 sm:!py-10"><div className="mx-auto max-w-3xl"><Card className="!p-7 text-center sm:!p-10"><span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl border border-blue-100 bg-blue-50 text-[#245e9b]"><Icon type={verificationIssue ? "shield" : "building"} className="h-6 w-6"/></span><h1 className="mt-5 text-2xl font-extrabold text-slate-900">{!isAuthenticated ? "Sign in to view this opportunity" : verificationIssue ? "Verify your student account first" : "Job details unavailable"}</h1><p className="mx-auto mt-2 max-w-xl break-words text-sm leading-6 text-slate-600">{error || "This job posting may have been removed or you may not have access to it."}</p><div className="mt-6 flex flex-wrap justify-center gap-3">{!isAuthenticated ? <Button onClick={() => navigate("/login")}>Sign in to continue</Button> : verificationIssue ? <Button onClick={() => navigate("/profile")}>Review profile</Button> : null}<Button variant="secondary" onClick={() => navigate("/jobs")}><Icon type="back" className="h-4 w-4"/> Back to opportunities</Button></div></Card></div></PageContainer>;
+    const verificationIssue = isStudent && (
+      user?.verificationStatus !== "verified"
+      || (errorStatus === 403 && /verify|verification|college affiliation|college is not active/i.test(error))
+    );
+    const deadlinePassed = errorStatus === 410;
+    const eligibilityIssue = isStudent && errorStatus === 403 && !verificationIssue;
+    const errorHeading = !isAuthenticated
+      ? "Sign in to view this opportunity"
+      : verificationIssue
+        ? "Verify your student account first"
+        : deadlinePassed
+          ? "Application deadline has passed"
+          : eligibilityIssue
+            ? "This role does not match your eligibility"
+            : "Job details unavailable";
+    const errorIcon = verificationIssue ? "shield" : deadlinePassed ? "calendar" : "building";
+    return <PageContainer className="!py-7 sm:!py-10"><div className="mx-auto max-w-3xl"><Card className="!p-7 text-center sm:!p-10"><span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl border border-blue-100 bg-blue-50 text-[#245e9b]"><Icon type={errorIcon} className="h-6 w-6"/></span><h1 className="mt-5 text-2xl font-extrabold text-slate-900">{errorHeading}</h1><p className="mx-auto mt-2 max-w-xl break-words text-sm leading-6 text-slate-600">{error || "This job posting may have been removed or you may not have access to it."}</p><div className="mt-6 flex flex-wrap justify-center gap-3">{!isAuthenticated ? <Button onClick={() => navigate("/login")}>Sign in to continue</Button> : verificationIssue ? <Button onClick={() => navigate("/profile")}>Review profile</Button> : null}<Button variant="secondary" onClick={() => navigate("/jobs")}><Icon type="back" className="h-4 w-4"/> Back to opportunities</Button></div></Card></div></PageContainer>;
   }
 
   const branches = Array.isArray(job.allowedBranches) ? job.allowedBranches.filter(Boolean) : [];
