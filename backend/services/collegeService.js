@@ -39,10 +39,48 @@ export const searchApprovedColleges = async (q = "") => {
         .select("name") .sort({ name: 1 }).limit(15).lean();
 };
 
-export const listColleges = async (status) => {
+export const listColleges = async ({ status, search = "", page = 1, limit = 10 } = {}) => {
     const allowed = ["pending", "approved", "rejected", "suspended"];
     const filter = allowed.includes(status) ? { status } : {};
-    return College.find(filter).select("name contactPerson contactDesignation contactEmail contactPhone website address status rejectionReason reviewReason approvedAt suspendedAt admin createdAt updatedAt").populate("admin", "name email").sort({ createdAt: -1 }).lean();
+    const query = String(search || "").trim().slice(0, 100);
+    if (query) {
+        const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        filter.$or = [
+            { name: { $regex: escaped, $options: "i" } },
+            { contactPerson: { $regex: escaped, $options: "i" } },
+            { contactDesignation: { $regex: escaped, $options: "i" } },
+            { contactEmail: { $regex: escaped, $options: "i" } },
+            { contactPhone: { $regex: escaped, $options: "i" } },
+            { address: { $regex: escaped, $options: "i" } },
+            { website: { $regex: escaped, $options: "i" } },
+        ];
+    }
+
+    const requestedPage = Number(page);
+    const requestedLimit = Number(limit);
+    const safeLimit = Number.isSafeInteger(requestedLimit) && requestedLimit > 0 ? Math.min(requestedLimit, 50) : 10;
+    const safePage = Number.isSafeInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
+    const [totalColleges, statusCounts] = await Promise.all([
+        College.countDocuments(filter),
+        College.aggregate([{ $group: { _id: "$status", count: { $sum: 1 } } }]),
+    ]);
+    const totalPages = Math.max(1, Math.ceil(totalColleges / safeLimit));
+    const currentPage = Math.min(safePage, totalPages);
+    const colleges = await College.find(filter)
+        .select("name contactPerson contactDesignation contactEmail contactPhone website address status rejectionReason reviewReason approvedAt suspendedAt admin createdAt updatedAt")
+        .populate("admin", "name email")
+        .sort({ createdAt: -1, _id: -1 })
+        .skip((currentPage - 1) * safeLimit)
+        .limit(safeLimit)
+        .lean();
+
+    const counts = { all: 0, pending: 0, approved: 0, rejected: 0, suspended: 0 };
+    for (const item of statusCounts) {
+        if (Object.prototype.hasOwnProperty.call(counts, item._id)) counts[item._id] = item.count;
+        counts.all += item.count;
+    }
+
+    return { colleges, totalColleges, currentPage, totalPages, counts };
 };
 
 const createInvitation = async (college, creatorId) => {
