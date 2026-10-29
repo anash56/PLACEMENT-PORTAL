@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect } from "react";
 import { BrowserRouter, Routes, Route, Outlet, useLocation, useNavigate } from "react-router-dom";
 import Navbar from "./components/Navbar";
-import ProtectedRoute from "./components/ProtectedRoute";
+
 import RoleRoute from "./components/RoleRoute";
 import AdminLayout from "./layouts/AdminLayout";
 import { useAuth } from "./context/AuthContext";
@@ -68,8 +68,8 @@ export default function App() {
                         <Route path="/college-onboarding" element={<CollegeOnboarding />} />
                         <Route path="/accept-invitation" element={<AcceptInvitation />} />
                         <Route path="/reset-password/:token" element={<ResetPassword />} />
-                        <Route path="/my-applications" element={<ProtectedRoute><MyApplications /></ProtectedRoute>} />
-                        <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+                        <Route path="/my-applications" element={<RoleRoute roles={["student"]}><MyApplications /></RoleRoute>} />
+                        <Route path="/profile" element={<RoleRoute roles={["student"]}><Profile /></RoleRoute>} />
                         <Route path="/super-admin" element={<RoleRoute roles={["super_admin"]}><SuperAdminDashboard /></RoleRoute>} />
                     </Route>
                     <Route path="/admin" element={<RoleRoute roles={["college_admin"]}><AdminLayout /></RoleRoute>}>
