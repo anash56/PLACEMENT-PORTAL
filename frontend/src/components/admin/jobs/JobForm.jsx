@@ -1,3 +1,4 @@
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import Button from "../../ui/Button";
 import Input from "../../ui/Input";
@@ -16,22 +17,39 @@ const WORKFLOW_TEMPLATES = [
 
 const RESERVED_STATUSES = ["Submitted", "Selected", "Rejected", "Withdrawn"];
 
+const parseStageNames = value => String(value || "")
+    .split(String(value || "").includes("\n") ? /\r?\n/ : ",")
+    .map(stage => stage.trim())
+    .filter(Boolean);
+
 export default function JobForm({ formData, onChange, onSubmit, saving, mode = "create", onCancel }) {
     const isEdit = mode === "edit";
-    const nextStageId = useRef(1);
+
+    const initialStageNames = parseStageNames(formData.selectionStagesText);
+
+    const nextStageId = useRef(initialStageNames.length + 1);
     const lastWrittenText = useRef(String(formData.selectionStagesText || ""));
-    const createRows = useCallback(value => String(value || "")
-        .split(String(value || "").includes("\n") ? /\r?\n/ : ",")
-        .map(stage => stage.trim())
-        .filter(Boolean)
-        .map(name => ({ id: nextStageId.current++, name })), []);
-    const [stageRows, setStageRows] = useState(() => createRows(formData.selectionStagesText));
+
+    const [stageRows, setStageRows] = useState(() =>
+        initialStageNames.map((name, index) => ({
+            id: index + 1,
+            name,
+        }))
+    );
+
+    const createRows = useCallback(value => (
+        parseStageNames(value).map(name => ({
+            id: nextStageId.current++,
+            name,
+        }))
+    ), []);
+
     const [templateChoice, setTemplateChoice] = useState("");
 
-    // Sync only when the parent changes the workflow from outside this editor (for example,
-    // when a saved job is loaded). Local typing, including a temporarily blank row, is preserved.
+    // Sync only when the parent changes the workflow from outside this editor.
     useEffect(() => {
         const incoming = String(formData.selectionStagesText || "");
+
         if (incoming !== lastWrittenText.current) {
             lastWrittenText.current = incoming;
             setStageRows(createRows(incoming));
@@ -40,35 +58,74 @@ export default function JobForm({ formData, onChange, onSubmit, saving, mode = "
 
     const publishRows = nextRows => {
         setStageRows(nextRows);
+
         const serialized = nextRows.map(row => row.name).join("\n");
         lastWrittenText.current = serialized;
-        onChange({ target: { name: "selectionStagesText", value: serialized } });
+
+        onChange({
+            target: {
+                name: "selectionStagesText",
+                value: serialized,
+            },
+        });
     };
 
     const applyTemplate = event => {
         const value = event.target.value;
         setTemplateChoice("");
+
         if (!value) return;
+
         if (value === "no-stages") {
             publishRows([]);
             return;
         }
+
         const template = WORKFLOW_TEMPLATES.find(item => item.value === value);
-        if (template) publishRows(template.stages.map(name => ({ id: nextStageId.current++, name })));
+
+        if (template) {
+            publishRows(
+                template.stages.map(name => ({
+                    id: nextStageId.current++,
+                    name,
+                }))
+            );
+        }
     };
 
-    const updateStage = (id, name) => publishRows(stageRows.map(row => row.id === id ? { ...row, name } : row));
+    const updateStage = (id, name) => {
+        publishRows(
+            stageRows.map(row =>
+                row.id === id ? { ...row, name } : row
+            )
+        );
+    };
+
     const moveStage = (index, offset) => {
         const target = index + offset;
+
         if (target < 0 || target >= stageRows.length) return;
+
         const next = [...stageRows];
         [next[index], next[target]] = [next[target], next[index]];
+
         publishRows(next);
     };
-    const removeStage = id => publishRows(stageRows.filter(row => row.id !== id));
+
+    const removeStage = id => {
+        publishRows(stageRows.filter(row => row.id !== id));
+    };
+
     const addStage = () => {
         if (stageRows.length >= MAX_WORKFLOW_STAGES) return;
-        publishRows([...stageRows, { id: nextStageId.current++, name: "" }]);
+
+        publishRows([
+            ...stageRows,
+            {
+                id: nextStageId.current++,
+                name: "",
+            },
+        ]);
     };
 
     const validStageCount = stageRows.filter(row => row.name.trim()).length;
@@ -82,14 +139,17 @@ export default function JobForm({ formData, onChange, onSubmit, saving, mode = "
                         <span className="grid h-7 w-7 place-items-center rounded-lg bg-slate-100 text-xs font-extrabold text-slate-700">01</span>
                         Opportunity details
                     </legend>
+
                     <div className="grid gap-4 sm:grid-cols-2">
                         <Input label="Job title *" name="title" type="text" maxLength={200} placeholder="e.g. Backend Developer" value={formData.title} onChange={onChange} required autoComplete="off" />
                         <Input label="Company *" name="company" type="text" maxLength={200} placeholder="Company name" value={formData.company} onChange={onChange} required />
                     </div>
+
                     <div className="grid gap-4 sm:grid-cols-2">
                         <Input label="Location *" name="location" type="text" maxLength={200} placeholder="e.g. Ahmedabad / Remote" value={formData.location} onChange={onChange} required />
                         <Input label="Annual salary (₹) *" name="salary" type="number" min="0" step="any" placeholder="e.g. 600000" value={formData.salary} onChange={onChange} required />
                     </div>
+
                     <Textarea label="Job description *" name="description" maxLength={20000} placeholder="Responsibilities, requirements, and role details" value={formData.description} onChange={onChange} rows={6} required />
                 </fieldset>
 
@@ -100,12 +160,17 @@ export default function JobForm({ formData, onChange, onSubmit, saving, mode = "
                         <span className="grid h-7 w-7 place-items-center rounded-lg bg-slate-100 text-xs font-extrabold text-slate-700">02</span>
                         Eligibility and deadline
                     </legend>
+
                     <div className="grid gap-4 sm:grid-cols-2">
                         <Input label="Minimum CGPA (0–10)" name="minCgpa" type="number" min="0" max="10" step="0.01" placeholder="e.g. 7.5" value={formData.minCgpa} onChange={onChange} />
                         <Input label="Application deadline" name="deadline" type="date" value={formData.deadline} onChange={onChange} />
                     </div>
+
                     <Input label="Allowed branches (comma-separated)" name="allowedBranchesText" type="text" placeholder="e.g. Information Technology, Computer Engineering" value={formData.allowedBranchesText} onChange={onChange} />
-                    <p className="text-xs leading-5 text-slate-600">Leave the branch list empty to allow all branches. Use branch names that match student profiles.</p>
+
+                    <p className="text-xs leading-5 text-slate-600">
+                        Leave the branch list empty to allow all branches. Use branch names that match student profiles.
+                    </p>
                 </fieldset>
 
                 <div className="h-px bg-slate-100" />
@@ -115,6 +180,7 @@ export default function JobForm({ formData, onChange, onSubmit, saving, mode = "
                         <span className="grid h-7 w-7 place-items-center rounded-lg bg-blue-50 text-xs font-extrabold text-[#245e9b]">03</span>
                         Hiring workflow <span className="font-semibold text-slate-500">(optional)</span>
                     </legend>
+
                     <p className="text-sm leading-6 text-slate-600">
                         Build the selection process for this job. Students start at Submitted; authorized admins record each real stage as the application progresses.
                     </p>
@@ -122,6 +188,7 @@ export default function JobForm({ formData, onChange, onSubmit, saving, mode = "
                     <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
                         <div className="min-w-0">
                             <label htmlFor="workflow-template" className="mb-2 block text-sm font-semibold text-slate-700">Start with a template</label>
+
                             <select
                                 id="workflow-template"
                                 value={templateChoice}
@@ -130,9 +197,12 @@ export default function JobForm({ formData, onChange, onSubmit, saving, mode = "
                             >
                                 <option value="">Choose a starter template…</option>
                                 <option value="no-stages">No custom stages (direct decision)</option>
-                                {WORKFLOW_TEMPLATES.map(template => <option key={template.value} value={template.value}>{template.label}</option>)}
+                                {WORKFLOW_TEMPLATES.map(template => (
+                                    <option key={template.value} value={template.value}>{template.label}</option>
+                                ))}
                             </select>
                         </div>
+
                         <Button type="button" variant="secondary" onClick={addStage} disabled={stageRows.length >= MAX_WORKFLOW_STAGES} className="w-full sm:w-auto">
                             <span aria-hidden="true" className="text-base leading-none">+</span> Add stage
                         </Button>
@@ -144,7 +214,10 @@ export default function JobForm({ formData, onChange, onSubmit, saving, mode = "
                                 <h3 className="text-sm font-extrabold text-slate-800">Your hiring stages</h3>
                                 <p className="mt-0.5 text-xs text-slate-600">Use the arrows to set the order.</p>
                             </div>
-                            <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-bold text-slate-700">{validStageCount}/{MAX_WORKFLOW_STAGES}</span>
+
+                            <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-bold text-slate-700">
+                                {validStageCount}/{MAX_WORKFLOW_STAGES}
+                            </span>
                         </div>
 
                         {stageRows.length > 0 ? (
@@ -152,6 +225,7 @@ export default function JobForm({ formData, onChange, onSubmit, saving, mode = "
                                 {stageRows.map((row, index) => (
                                     <li key={row.id} className="grid min-w-0 grid-cols-[28px_minmax(0,1fr)_auto] items-center gap-2 rounded-xl border border-slate-200 bg-white p-2.5 shadow-sm sm:grid-cols-[32px_minmax(0,1fr)_auto] sm:gap-3 sm:p-3">
                                         <span className="grid h-7 w-7 place-items-center rounded-lg bg-blue-50 text-xs font-extrabold tabular-nums text-[#245e9b]">{index + 1}</span>
+
                                         <input
                                             type="text"
                                             value={row.name}
@@ -161,9 +235,12 @@ export default function JobForm({ formData, onChange, onSubmit, saving, mode = "
                                             placeholder={`e.g. ${index === 0 ? "Resume review" : "Technical interview"}`}
                                             className="min-h-10 w-full min-w-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
                                         />
+
                                         <div className="flex items-center gap-1">
                                             <button type="button" onClick={() => moveStage(index, -1)} disabled={index === 0} aria-label={`Move stage ${index + 1} up`} title="Move up" className="grid h-9 w-9 place-items-center rounded-lg border border-slate-200 bg-slate-50 text-sm font-bold text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-[#245e9b] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:cursor-not-allowed disabled:opacity-35">↑</button>
+
                                             <button type="button" onClick={() => moveStage(index, 1)} disabled={index === stageRows.length - 1} aria-label={`Move stage ${index + 1} down`} title="Move down" className="grid h-9 w-9 place-items-center rounded-lg border border-slate-200 bg-slate-50 text-sm font-bold text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-[#245e9b] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:cursor-not-allowed disabled:opacity-35">↓</button>
+
                                             <button type="button" onClick={() => removeStage(row.id)} aria-label={`Remove stage ${index + 1}`} title="Remove stage" className="grid h-9 w-9 place-items-center rounded-lg border border-slate-200 bg-white text-lg leading-none text-slate-600 transition hover:border-slate-300 hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">×</button>
                                         </div>
                                     </li>
@@ -188,8 +265,12 @@ export default function JobForm({ formData, onChange, onSubmit, saving, mode = "
                                 <h3 className="text-sm font-extrabold text-[#173e70]">Workflow preview</h3>
                                 <p className="mt-1 text-xs leading-5 text-slate-600">This is the workflow new applicants will receive.</p>
                             </div>
-                            <span className="rounded-full border border-blue-100 bg-white px-2.5 py-1 text-xs font-bold text-[#245e9b]">{visibleStageNames.length + 1} stages</span>
+
+                            <span className="rounded-full border border-blue-100 bg-white px-2.5 py-1 text-xs font-bold text-[#245e9b]">
+                                {visibleStageNames.length + 1} stages
+                            </span>
                         </div>
+
                         <ol className="mt-3 grid gap-2 sm:grid-cols-2">
                             {["Submitted", ...visibleStageNames].map((stage, index) => (
                                 <li key={`${stage}-${index}`} className="flex min-w-0 items-center gap-2 rounded-xl border border-blue-100 bg-white px-3 py-2.5">
@@ -198,23 +279,30 @@ export default function JobForm({ formData, onChange, onSubmit, saving, mode = "
                                 </li>
                             ))}
                         </ol>
+
                         <div className="mt-3 border-t border-blue-100 pt-3">
                             <p className="text-[10px] font-extrabold uppercase tracking-[.12em] text-slate-600">Final outcomes available to every job</p>
+
                             <div className="mt-2 flex flex-wrap gap-2">
                                 {RESERVED_STATUSES.slice(1).map(status => (
-                                    <span key={status} className={`rounded-full border px-2.5 py-1 text-xs font-bold ${status === "Selected" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : status === "Rejected" ? "border-rose-200 bg-rose-50 text-rose-800" : "border-slate-200 bg-slate-100 text-slate-700"}`}>{status}</span>
+                                    <span key={status} className={`rounded-full border px-2.5 py-1 text-xs font-bold ${status === "Selected" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : status === "Rejected" ? "border-rose-200 bg-rose-50 text-rose-800" : "border-slate-200 bg-slate-100 text-slate-700"}`}>
+                                        {status}
+                                    </span>
                                 ))}
                             </div>
                         </div>
                     </div>
 
-                    {isEdit && <p className="rounded-xl border border-blue-100 bg-blue-50/70 px-3 py-2.5 text-xs leading-5 text-[#23476f]">
-                        Existing applications keep the workflow snapshot they started with. Changes here apply to new applications.
-                    </p>}
+                    {isEdit && (
+                        <p className="rounded-xl border border-blue-100 bg-blue-50/70 px-3 py-2.5 text-xs leading-5 text-[#23476f]">
+                            Existing applications keep the workflow snapshot they started with. Changes here apply to new applications.
+                        </p>
+                    )}
                 </fieldset>
 
                 <div className="flex flex-col-reverse gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:justify-end">
                     <Button type="button" variant="secondary" onClick={onCancel} disabled={saving} className="sm:min-w-28">Cancel</Button>
+
                     <Button type="submit" disabled={saving} className="sm:min-w-40">
                         {saving ? (isEdit ? "Saving changes…" : "Creating job…") : (isEdit ? "Save changes" : "Create job")}
                     </Button>

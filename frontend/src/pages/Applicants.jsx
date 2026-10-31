@@ -13,7 +13,26 @@ const FINAL_STATUSES = new Set(["Selected", "Offered", "Rejected", "Withdrawn"])
 
 function csvCell(value) {
     let text = String(value ?? "");
-    if (/^[\s\u0000-\u001f]*[=+\-@]/.test(text)) text = `'${text}`;
+
+    // Skip whitespace and control characters before checking for formulas.
+    let index = 0;
+
+    while (index < text.length) {
+        const character = text[index];
+        const code = text.charCodeAt(index);
+
+        if (/\s/.test(character) || code <= 0x1f) {
+            index++;
+        } else {
+            break;
+        }
+    }
+
+    // Prevent spreadsheet formula injection.
+    if (["=", "+", "-", "@"].includes(text[index])) {
+        text = `'${text}`;
+    }
+
     return `"${text.replace(/"/g, '""')}"`;
 }
 
@@ -129,9 +148,10 @@ export default function Applicants() {
             }
         }
     }, [jobId, page, submittedSearch, statusFilter]);
-
     useEffect(() => {
-        fetchApplicants();
+        // Fetch initial applicant data from the API.
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- Initial asynchronous API request.
+        void fetchApplicants();
 
         return () => {
             requestSequence.current += 1;

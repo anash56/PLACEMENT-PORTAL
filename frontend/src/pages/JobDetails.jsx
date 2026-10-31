@@ -11,14 +11,14 @@ import "../styles/pages/profile-jobs.css";
 
 const Icon = ({ type, className = "h-5 w-5" }) => {
   const paths = {
-    pin: <><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></>,
-    money: <><rect x="2.5" y="5" width="19" height="14" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M6 9H5m14 6h-1"/></>,
-    arrow: <><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></>,
-    calendar: <><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></>,
-    building: <><path d="M3 21h18M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"/><path d="M9 7h2m2 0h2M9 11h2m2 0h2M9 15h2m2 0h2"/></>,
-    graduation: <><path d="m2 9 10-5 10 5-10 5L2 9Z"/><path d="M6 11v5c3.8 3 8.2 3 12 0v-5M22 9v6"/></>,
-    shield: <><path d="M12 3 20 6v5c0 5-3.4 8.2-8 10-4.6-1.8-8-5-8-10V6l8-3Z"/><path d="m8.5 12 2.2 2.2 4.8-4.8"/></>,
-    back: <><path d="M19 12H5"/><path d="m11 18-6-6 6-6"/></>,
+    pin: <><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z" /><circle cx="12" cy="10" r="2.5" /></>,
+    money: <><rect x="2.5" y="5" width="19" height="14" rx="2" /><circle cx="12" cy="12" r="3" /><path d="M6 9H5m14 6h-1" /></>,
+    arrow: <><path d="M5 12h14" /><path d="m13 6 6 6-6 6" /></>,
+    calendar: <><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M16 3v4M8 3v4M3 10h18" /></>,
+    building: <><path d="M3 21h18M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16" /><path d="M9 7h2m2 0h2M9 11h2m2 0h2M9 15h2m2 0h2" /></>,
+    graduation: <><path d="m2 9 10-5 10 5-10 5L2 9Z" /><path d="M6 11v5c3.8 3 8.2 3 12 0v-5M22 9v6" /></>,
+    shield: <><path d="M12 3 20 6v5c0 5-3.4 8.2-8 10-4.6-1.8-8-5-8-10V6l8-3Z" /><path d="m8.5 12 2.2 2.2 4.8-4.8" /></>,
+    back: <><path d="M19 12H5" /><path d="m11 18-6-6 6-6" /></>,
   };
   return <svg aria-hidden="true" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">{paths[type]}</svg>;
 };
@@ -50,7 +50,8 @@ export default function JobDetails() {
   const navigate = useNavigate();
   const { user, isAuthenticated, isStudent, isCollegeAdmin } = useAuth();
   const [job, setJob] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loadedJobId, setLoadedJobId] = useState(null);
+  const loading = isAuthenticated && loadedJobId !== jobId;
   const [error, setError] = useState("");
   const [errorStatus, setErrorStatus] = useState(null);
   const [alreadyApplied, setAlreadyApplied] = useState(false);
@@ -59,46 +60,61 @@ export default function JobDetails() {
 
   useEffect(() => {
     let active = true;
+
     if (!isAuthenticated) {
-      setError("Sign in to view full job details and eligibility.");
-      setLoading(false);
-      setJob(null);
-      return () => { active = false; };
+      return () => {
+        active = false;
+      };
     }
 
-    setLoading(true);
-    setError("");
-    setErrorStatus(null);
     api.get(`/jobs/${jobId}`)
       .then(response => {
-        if (active) setJob(response.data.job || response.data);
+        if (!active) return;
+
+        setJob(response.data.job || response.data);
+        setError("");
+        setErrorStatus(null);
+
+        if (!isStudent) {
+          setAlreadyApplied(false);
+        }
+
+        setLoadedJobId(jobId);
       })
       .catch(requestError => {
-        if (active) {
-          setErrorStatus(requestError.response?.status || null);
-          setError(requestError.response?.data?.message || "We could not load this job posting.");
-        }
-      })
-      .finally(() => {
-        if (active) setLoading(false);
+        if (!active) return;
+
+        setErrorStatus(requestError.response?.status || null);
+        setError(
+          requestError.response?.data?.message ||
+          "We could not load this job posting."
+        );
+        setLoadedJobId(jobId);
       });
 
     if (isStudent) {
-      api.get("/applications/my", { params: { jobIds: jobId, limit: 1 } })
+      api.get("/applications/my", {
+        params: { jobIds: jobId, limit: 1 },
+      })
         .then(response => {
           if (!active) return;
+
           const applications = response.data.applications || [];
-          setAlreadyApplied(applications.some(application => {
-            const linkedJob = application.job?._id || application.job;
-            return linkedJob && String(linkedJob) === String(jobId);
-          }));
+
+          setAlreadyApplied(
+            applications.some(application => {
+              const linkedJob = application.job?._id || application.job;
+
+              return linkedJob && String(linkedJob) === String(jobId);
+            })
+          );
         })
-        .catch(() => {});
-    } else {
-      setAlreadyApplied(false);
+        .catch(() => { });
     }
 
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [jobId, isAuthenticated, isStudent]);
 
   const submitApplication = async () => {
@@ -116,8 +132,8 @@ export default function JobDetails() {
     }
   };
 
-  if (loading) {
-    return <PageContainer className="!py-7 sm:!py-10"><div className="mx-auto max-w-6xl"><Card className="!p-6 sm:!p-9" aria-busy="true"><div className="animate-pulse space-y-5"><div className="h-4 w-36 rounded bg-slate-100"/><div className="h-9 w-3/5 rounded bg-slate-100"/><div className="h-4 w-2/5 rounded bg-slate-100"/><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><div className="h-24 rounded-xl bg-slate-50"/><div className="h-24 rounded-xl bg-slate-50"/><div className="h-24 rounded-xl bg-slate-50"/><div className="h-24 rounded-xl bg-slate-50"/></div></div></Card></div></PageContainer>;
+  if (isAuthenticated && loading) {
+    return <PageContainer className="!py-7 sm:!py-10"><div className="mx-auto max-w-6xl"><Card className="!p-6 sm:!p-9" aria-busy="true"><div className="animate-pulse space-y-5"><div className="h-4 w-36 rounded bg-slate-100" /><div className="h-9 w-3/5 rounded bg-slate-100" /><div className="h-4 w-2/5 rounded bg-slate-100" /><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><div className="h-24 rounded-xl bg-slate-50" /><div className="h-24 rounded-xl bg-slate-50" /><div className="h-24 rounded-xl bg-slate-50" /><div className="h-24 rounded-xl bg-slate-50" /></div></div></Card></div></PageContainer>;
   }
 
   if (error || !job) {
@@ -137,7 +153,7 @@ export default function JobDetails() {
             ? "This role does not match your eligibility"
             : "Job details unavailable";
     const errorIcon = verificationIssue ? "shield" : deadlinePassed ? "calendar" : "building";
-    return <PageContainer className="!py-7 sm:!py-10"><div className="mx-auto max-w-3xl"><Card className="!p-7 text-center sm:!p-10"><span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl border border-blue-100 bg-blue-50 text-[#245e9b]"><Icon type={errorIcon} className="h-6 w-6"/></span><h1 className="mt-5 text-2xl font-extrabold text-slate-900">{errorHeading}</h1><p className="mx-auto mt-2 max-w-xl break-words text-sm leading-6 text-slate-600">{error || "This job posting may have been removed or you may not have access to it."}</p><div className="mt-6 flex flex-wrap justify-center gap-3">{!isAuthenticated ? <Button onClick={() => navigate("/login")}>Sign in to continue</Button> : verificationIssue ? <Button onClick={() => navigate("/profile")}>Review profile</Button> : null}<Button variant="secondary" onClick={() => navigate("/jobs")}><Icon type="back" className="h-4 w-4"/> Back to opportunities</Button></div></Card></div></PageContainer>;
+    return <PageContainer className="!py-7 sm:!py-10"><div className="mx-auto max-w-3xl"><Card className="!p-7 text-center sm:!p-10"><span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl border border-blue-100 bg-blue-50 text-[#245e9b]"><Icon type={errorIcon} className="h-6 w-6" /></span><h1 className="mt-5 text-2xl font-extrabold text-slate-900">{errorHeading}</h1><p className="mx-auto mt-2 max-w-xl break-words text-sm leading-6 text-slate-600">{error || "This job posting may have been removed or you may not have access to it."}</p><div className="mt-6 flex flex-wrap justify-center gap-3">{!isAuthenticated ? <Button onClick={() => navigate("/login")}>Sign in to continue</Button> : verificationIssue ? <Button onClick={() => navigate("/profile")}>Review profile</Button> : null}<Button variant="secondary" onClick={() => navigate("/jobs")}><Icon type="back" className="h-4 w-4" /> Back to opportunities</Button></div></Card></div></PageContainer>;
   }
 
   const branches = Array.isArray(job.allowedBranches) ? job.allowedBranches.filter(Boolean) : [];
@@ -156,7 +172,7 @@ export default function JobDetails() {
 
   return <PageContainer className="!py-7 sm:!py-10">
     <div className="mx-auto max-w-6xl min-w-0">
-      <button type="button" onClick={() => navigate("/jobs")} className="mb-5 inline-flex items-center gap-2 rounded-lg px-2 py-2 text-sm font-bold text-[#245e9b] transition hover:bg-blue-50 hover:text-[#173c63]"><Icon type="back" className="h-4 w-4"/> Back to opportunities</button>
+      <button type="button" onClick={() => navigate("/jobs")} className="mb-5 inline-flex items-center gap-2 rounded-lg px-2 py-2 text-sm font-bold text-[#245e9b] transition hover:bg-blue-50 hover:text-[#173c63]"><Icon type="back" className="h-4 w-4" /> Back to opportunities</button>
 
       <header className="relative isolate mb-7 min-w-0 overflow-hidden rounded-[26px] bg-[linear-gradient(115deg,#071b3b_0%,#0b2e61_58%,#1555a5_100%)] p-6 text-white shadow-[0_18px_50px_rgba(13,54,111,.17)] sm:p-8 lg:p-10">
         <div className="pointer-events-none absolute -right-16 -top-24 -z-10 h-64 w-64 rounded-full border border-white/15 shadow-[0_0_0_32px_rgba(255,255,255,.035),0_0_0_68px_rgba(255,255,255,.025)]" />
@@ -164,7 +180,7 @@ export default function JobDetails() {
         <div className="mt-4 flex min-w-0 flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex min-w-0 items-start gap-4">
             <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl border border-white/20 bg-white/10 text-lg font-extrabold text-white">{getInitials(job.company)}</span>
-            <div className="min-w-0"><h1 className="break-words text-3xl font-extrabold leading-tight tracking-[-.045em] text-white sm:text-4xl">{job.title || "Untitled role"}</h1><p className="mt-2 break-words text-base font-bold text-blue-100 sm:text-lg">{job.company || "Company not specified"}</p>{job.college?.name && <p className="mt-2 inline-flex max-w-full items-start gap-2 break-words text-sm text-blue-100/90"><Icon type="building" className="mt-0.5 h-4 w-4 shrink-0"/>{job.college.name}</p>}</div>
+            <div className="min-w-0"><h1 className="break-words text-3xl font-extrabold leading-tight tracking-[-.045em] text-white sm:text-4xl">{job.title || "Untitled role"}</h1><p className="mt-2 break-words text-base font-bold text-blue-100 sm:text-lg">{job.company || "Company not specified"}</p>{job.college?.name && <p className="mt-2 inline-flex max-w-full items-start gap-2 break-words text-sm text-blue-100/90"><Icon type="building" className="mt-0.5 h-4 w-4 shrink-0" />{job.college.name}</p>}</div>
           </div>
           {alreadyApplied && <span className="inline-flex w-fit shrink-0 items-center rounded-full border border-emerald-200/30 bg-emerald-300/15 px-3 py-1.5 text-xs font-extrabold uppercase tracking-wide text-emerald-100">Application submitted</span>}
         </div>
@@ -189,7 +205,7 @@ export default function JobDetails() {
             </div>
           </Card>
           <Card className="min-w-0 !p-5 sm:!p-6">
-            <div className="flex items-start gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-blue-50 text-[#245e9b]"><Icon type="building" className="h-5 w-5"/></span><div className="min-w-0"><h2 className="text-base font-extrabold text-slate-900">Posting information</h2><p className="mt-1 break-words text-sm leading-6 text-slate-600">{job.college?.name || "Your college placement portal"}</p><p className="mt-2 text-xs leading-5 text-slate-500">For questions about this opportunity, contact your college placement team.</p></div></div>
+            <div className="flex items-start gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-blue-50 text-[#245e9b]"><Icon type="building" className="h-5 w-5" /></span><div className="min-w-0"><h2 className="text-base font-extrabold text-slate-900">Posting information</h2><p className="mt-1 break-words text-sm leading-6 text-slate-600">{job.college?.name || "Your college placement portal"}</p><p className="mt-2 text-xs leading-5 text-slate-500">For questions about this opportunity, contact your college placement team.</p></div></div>
           </Card>
         </div>
         <Card className="portal-job-description-card min-w-0 !p-5 sm:!p-7">
@@ -201,13 +217,13 @@ export default function JobDetails() {
 
       <section className="mt-7 min-w-0 rounded-[24px] border border-blue-100 bg-[linear-gradient(120deg,#eef5ff_0%,#ffffff_65%,#f7faff_100%)] p-5 shadow-[0_8px_24px_rgba(18,57,109,.04)] sm:p-7 lg:p-8" aria-labelledby="application-action-title">
         <div className="flex min-w-0 flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex min-w-0 items-start gap-3"><span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-blue-100 bg-white text-[#245e9b]"><Icon type="shield" className="h-5 w-5"/></span><div className="min-w-0"><p className="text-[10px] font-extrabold uppercase tracking-[.18em] text-[#365e85]">Next step</p><h2 id="application-action-title" className="mt-1 break-words text-xl font-extrabold text-slate-900">{alreadyApplied ? "You have applied for this role" : isStudent && !profileReady ? "Finish your profile first" : isStudent ? "Ready to apply?" : "Review the full role details"}</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">{alreadyApplied ? "Your application has been submitted. You can follow its progress from My applications." : isStudent && !profileReady ? `Before applying, please ${profileRequirements}.` : isStudent ? "Your profile and resume are ready. Review the role details, then submit your application when you're ready." : "Students can submit applications from this page after reviewing the role and eligibility criteria."}</p></div></div>
+          <div className="flex min-w-0 items-start gap-3"><span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-blue-100 bg-white text-[#245e9b]"><Icon type="shield" className="h-5 w-5" /></span><div className="min-w-0"><p className="text-[10px] font-extrabold uppercase tracking-[.18em] text-[#365e85]">Next step</p><h2 id="application-action-title" className="mt-1 break-words text-xl font-extrabold text-slate-900">{alreadyApplied ? "You have applied for this role" : isStudent && !profileReady ? "Finish your profile first" : isStudent ? "Ready to apply?" : "Review the full role details"}</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">{alreadyApplied ? "Your application has been submitted. You can follow its progress from My applications." : isStudent && !profileReady ? `Before applying, please ${profileRequirements}.` : isStudent ? "Your profile and resume are ready. Review the role details, then submit your application when you're ready." : "Students can submit applications from this page after reviewing the role and eligibility criteria."}</p></div></div>
           <div className="flex min-w-0 shrink-0 flex-col gap-2 sm:min-w-[190px]">
-            {alreadyApplied ? <Button onClick={() => navigate("/my-applications")} className="w-full justify-center">View my applications <Icon type="arrow" className="h-4 w-4"/></Button>
-              : canApply ? <Button onClick={() => setApplyConfirmationOpen(true)} className="w-full justify-center">Submit application <Icon type="arrow" className="h-4 w-4"/></Button>
-              : isStudent ? <Button variant="secondary" onClick={() => navigate("/profile")} className="w-full justify-center">Review profile</Button>
-              : isCollegeAdmin ? <Button variant="secondary" onClick={() => navigate(`/admin/jobs/${job._id}/applicants`)} className="w-full justify-center">View applicants</Button>
-              : <Button variant="secondary" onClick={() => navigate("/jobs")} className="w-full justify-center">Back to opportunities</Button>}
+            {alreadyApplied ? <Button onClick={() => navigate("/my-applications")} className="w-full justify-center">View my applications <Icon type="arrow" className="h-4 w-4" /></Button>
+              : canApply ? <Button onClick={() => setApplyConfirmationOpen(true)} className="w-full justify-center">Submit application <Icon type="arrow" className="h-4 w-4" /></Button>
+                : isStudent ? <Button variant="secondary" onClick={() => navigate("/profile")} className="w-full justify-center">Review profile</Button>
+                  : isCollegeAdmin ? <Button variant="secondary" onClick={() => navigate(`/admin/jobs/${job._id}/applicants`)} className="w-full justify-center">View applicants</Button>
+                    : <Button variant="secondary" onClick={() => navigate("/jobs")} className="w-full justify-center">Back to opportunities</Button>}
             {isStudent && !alreadyApplied && <p className="text-center text-xs leading-5 text-slate-500">Applications use the details saved in your student profile.</p>}
           </div>
         </div>

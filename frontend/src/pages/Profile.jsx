@@ -65,7 +65,11 @@ export default function Profile() {
     }
   }, []);
 
-  useEffect(() => { loadProfile(); }, [loadProfile]);
+  useEffect(() => {
+    // Load the student's profile when the page mounts.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Required for initial asynchronous profile loading.
+    void loadProfile();
+  }, [loadProfile]);
 
   const setField = event => {
     const { name, value } = event.target;
@@ -171,8 +175,8 @@ export default function Profile() {
           <Button variant="secondary" onClick={loadProfile} disabled={loading} className="shrink-0">Refresh profile</Button>
         </div>
         <div className="portal-profile-layout grid min-w-0 items-start gap-5 lg:grid-cols-[minmax(260px,.8fr)_minmax(0,1.8fr)]">
-          <div className="min-w-0 space-y-5"><ProfileSummaryCard profile={profile}/>{profile.verificationStatus !== "verified" && <CollegeVerificationCard profile={profile} idCardName={idCardName} resubmitting={resubmitting} onFileChange={event => pickFile(event, "id")} onSubmit={resubmitIdCard}/>}</div>
-          <div className="min-w-0"><ProfileEditForm profile={profile} saving={saving} resumeName={resumeName} onChange={setField} onFileChange={event => pickFile(event, "resume")} onSubmit={saveProfile}/></div>
+          <div className="min-w-0 space-y-5"><ProfileSummaryCard profile={profile} />{profile.verificationStatus !== "verified" && <CollegeVerificationCard profile={profile} idCardName={idCardName} resubmitting={resubmitting} onFileChange={event => pickFile(event, "id")} onSubmit={resubmitIdCard} />}</div>
+          <div className="min-w-0"><ProfileEditForm profile={profile} saving={saving} resumeName={resumeName} onChange={setField} onFileChange={event => pickFile(event, "resume")} onSubmit={saveProfile} /></div>
         </div>
       </div>
     </PageContainer>

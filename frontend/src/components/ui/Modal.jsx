@@ -4,7 +4,9 @@ function Modal({ open, title, children, onClose }) {
     const panelRef = useRef(null);
     const closeHandlerRef = useRef(onClose);
     const titleId = useId();
-    closeHandlerRef.current = onClose;
+    useEffect(() => {
+        closeHandlerRef.current = onClose;
+    }, [onClose]);
 
     useEffect(() => {
         if (!open) return undefined;

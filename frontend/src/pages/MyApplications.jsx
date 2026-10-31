@@ -84,8 +84,13 @@ export default function MyApplications() {
     }, [page, category, statusFilter, submittedSearch, sort]);
 
     useEffect(() => {
-        fetchApplications();
-        return () => { requestSequence.current += 1; };
+        // Fetch applications whenever pagination or filters change.
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- Required for asynchronous API data loading.
+        void fetchApplications();
+
+        return () => {
+            requestSequence.current += 1;
+        };
     }, [fetchApplications]);
 
     const clearFilters = () => {
@@ -210,7 +215,7 @@ export default function MyApplications() {
                     <Card className="!rounded-2xl">
                         <div className="py-10 text-center">
                             <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl border border-slate-200 bg-slate-50 text-[#365e85]" aria-hidden="true">
-                                <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 12h18"/></svg>
+                                <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="7" width="18" height="13" rx="2" /><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 12h18" /></svg>
                             </span>
                             <h2 className="mt-4 text-xl font-extrabold text-slate-900">No applications yet</h2>
                             <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-600">When you apply to an eligible opening, its status and progress will appear here.</p>

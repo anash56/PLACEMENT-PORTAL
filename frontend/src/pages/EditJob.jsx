@@ -31,9 +31,10 @@ export default function EditJob() {
     }, [id]);
 
     useEffect(() => {
-        fetchJob();
+        // Load the job details when the component mounts or the job ID changes.
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- Required for initial asynchronous API loading.
+        void fetchJob();
     }, [fetchJob]);
-
     const handleChange = event => {
         const { name, value } = event.target;
         setFormData(current => ({ ...current, [name]: value }));
